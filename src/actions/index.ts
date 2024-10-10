@@ -36,7 +36,7 @@ export const server = {
         }
     }),
     logout: defineAction({
-        accept: "form",
+        accept: "json",
         handler: (_, { cookies }) => {
             cookies.delete("sb-access-token", { path: "/" });
             cookies.delete("sb-refresh-token", { path: "/" });

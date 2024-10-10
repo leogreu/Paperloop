@@ -1,8 +1,9 @@
 ---
-import { actions } from "astro:actions";
-import { FileText, LogIn, User, LogOut } from "lucide-react";
-import { Button } from "../ui/button";
+
+import { FileText } from "lucide-react";
+
 import { getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
+import AuthIsland from "./auth-island.astro";
 
 const locale = getPreferredLocale(Astro.request.headers);
 const i18n = getTranslations(locale);
@@ -25,39 +26,11 @@ const i18n = getTranslations(locale);
             </a>
         }
     </nav>
-    <nav class="flex flex-row ml-auto items-center gap-2 text-sm font-semibold">
+    <nav class="ml-auto flex items-center gap-2">
         <slot></slot>
-        {Astro.locals.user
-            ? <Button id="add" size="sm" variant="outline">
-                <span>{i18n("new-document")}</span>
-            </Button>
-            <form action={actions.logout} method="post">
-                <Button size="icon" variant="outline" className="h-9 w-9 rounded-full group">
-                    <User strokeWidth="2.25" className="h-4 w-4 group-hover:hidden" />
-                    <LogOut strokeWidth="2.25" className="hidden h-4 w-4 group-hover:block" />
-                </Button>
-            </form>
-            : <a href="/auth/register">
-                <Button size="sm" variant="outline">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    <span>{i18n("register")}</span>
-                </Button>
-            </a>
-        }
+        <AuthIsland server:defer></AuthIsland>
     </nav>
 </header>
-
-<script>
-    import { actions } from "astro:actions";
-    import { navigate } from "astro:transitions/client";
-
-    document.addEventListener("astro:page-load", () => {
-        document.querySelector("button#add")?.addEventListener("click", async () => {
-            const { data, error } = await actions.createDocument();
-            if (!error) navigate(`/docs/${data.id}`);
-        });
-    });
-</script>
 
 <style>
     @media print {

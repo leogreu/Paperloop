@@ -1,0 +1,43 @@
+---
+import { Button } from "../ui/button";
+import { LogIn, User, LogOut } from "lucide-react";
+import { getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
+
+const locale = getPreferredLocale(Astro.request.headers);
+const i18n = getTranslations(locale);
+---
+
+<div class="flex items-center gap-2">
+    {Astro.locals.user
+        ? <Button id="add" size="sm" variant="outline">
+            <span>{i18n("new-document")}</span>
+        </Button>
+        <Button id="logout" size="icon" variant="outline" className="h-9 w-9 rounded-full group">
+            <User strokeWidth="2.25" className="h-4 w-4 group-hover:hidden" />
+            <LogOut strokeWidth="2.25" className="hidden h-4 w-4 group-hover:block" />
+        </Button>
+        : <a href="/auth/register">
+            <Button size="sm" variant="outline">
+                <LogIn className="mr-2 h-4 w-4" />
+                <span>{i18n("register")}</span>
+            </Button>
+        </a>
+    }
+</div>
+
+<script>
+    import { actions } from "astro:actions";
+    import { navigate } from "astro:transitions/client";
+
+    setTimeout(() => {
+        document.querySelector("button#add")?.addEventListener("click", async () => {
+            const { data, error } = await actions.createDocument();
+            if (!error) navigate(`/docs/${data.id}`);
+        });
+
+        document.querySelector("button#logout")?.addEventListener("click", async () => {
+            const { error } = await actions.logout();
+            if (!error) navigate("/");
+        });
+    }, 1000);
+</script>
