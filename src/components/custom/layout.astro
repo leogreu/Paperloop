@@ -8,16 +8,19 @@ interface Props {
     title: string;
     description?: string;
     locale?: string;
+    continuous?: boolean;
 }
 
-const { title, description, locale } = Astro.props;
+const { title, description, locale, continuous } = Astro.props;
 ---
 
 <html class="h-full" lang={locale}>
     <head>
         <meta charset="utf-8" />
         <meta name="description" content={description ?? "Paperloop"}>
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta property="og:image" content="/og-image.png"/>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <meta name="generator" content={Astro.generator} />
         {locales.map(lang =>
@@ -28,11 +31,11 @@ const { title, description, locale } = Astro.props;
         <slot name="head"></slot>
         <ViewTransitions />
     </head>
-    <body class="antialiased h-full flex flex-col">
+    <body class={`antialiased ${!continuous ? "h-full flex flex-col" : ""}`}>
         <Navbar>
             <slot name="navbar"></slot>
         </Navbar>
-        <main class="flex-1 p-8 overflow-auto">
+        <main class="flex-1 p-4 md:p-8 overflow-auto">
             <slot></slot>
         </main>
     </body>
@@ -53,6 +56,7 @@ const { title, description, locale } = Astro.props;
     @media print { 
         main {
             overflow: visible;
+            padding: 0;
         }
     }
 </style>

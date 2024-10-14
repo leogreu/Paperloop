@@ -9,40 +9,37 @@ import Layout from "@/components/custom/layout.astro";
 import DocumentRender from "@/components/custom/document-render.astro";
 import { getTranslations } from "@/utils/i18n.ts";
 
+const title = "Predictable, reusable, and versioned documents";
+const description = "Paperloop let's you write documents with separated static and dynamic content. Easily manage invoices, offers, contracts, resumes, and more using Markdown.";
+
 // TODO: Currently only pre-rendered in English
 const i18n = getTranslations("en");
 ---
 
-<Layout title={i18n("new-document")} description={i18n("new-document")} locale={"en"}>
-    <svg class="absolute inset-0 -z-10 h-full w-full stroke-gray-200 dark:stroke-gray-700 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]" aria-hidden="true">
-        <defs>
-            <pattern id="0787a7c5-978c-4f66-83c7-11c213f99cb7" width="200" height="200" x="50%" y="-1" patternUnits="userSpaceOnUse">
-                <path d="M.5 200V.5H200" fill="none" />
-            </pattern>
-        </defs>
-        <rect width="100%" height="100%" stroke-width="0" fill="url(#0787a7c5-978c-4f66-83c7-11c213f99cb7)" />
-    </svg>
-    <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-        <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
+<Layout title={title} description={description} locale={"en"} continuous>
+    <div class="relative">
+        <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+            <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
+        </div>
     </div>
     <div class="mt-16 mx-auto max-w-2xl text-center">
         <Badge variant="secondary" className="px-3 py-1 text-sm shadow">
             Paperloop 📄♻️
         </Badge>
         <h1 class="mt-8 text-5xl font-extrabold tracking-tight leading-tight">
-            Predictable, reusable, and versioned documents
+            {title}
         </h1>
         <h2 class="mt-8 text-xl font-normal tracking-tight text-slate-500 leading-snug">
-            Paperloop let's you write documents with separated static and dynamic content: Easily manage invoices, offers, contracts, marketing texts, and more. 100% free.
+            {description}
         </h1>
     </div>
-    <div class="mt-32 mx-auto max-w-7xl h-[34rem] flex gap-2">
-        <Card className="flex-1">
+    <div class="mt-32 mx-auto max-w-7xl min-h-[34rem] flex gap-2">
+        <Card className="flex-1 absolute opacity-0 md:relative md:opacity-100">
             <CardContent className="pt-6">
                 <div id="typeit" class="whitespace-pre-line"></div>
             </CardContent>
         </Card>
-        <Card className="flex-1">
+        <Card className="flex-1 z-10">
             <CardContent className="pt-6">
                 <DocumentRender></DocumentRender>
             </CardContent>
@@ -51,11 +48,17 @@ const i18n = getTranslations("en");
     <hr class="mt-16 mb-6">
     <div class="flex justify-between text-sm text-slate-500">
         <p>
-            © 2024 Paperloop. All rights reserved.
+            © 2024 Paperloop.
         </p>
-        <a href="/imprint">
-            {i18n("imprint")}
-        </a>
+        <div class="flex gap-2">
+            <a href="/imprint">
+                {i18n("imprint")}
+            </a>
+            •
+            <a href="https://github.com/leogreu/Paperloop">
+                GitHub
+            </a>
+        </div>
     </div>
 </Layout>
 
@@ -67,7 +70,7 @@ const i18n = getTranslations("en");
     document.addEventListener("astro:page-load", () => {
         typeit = new TypeIt("#typeit", {
             speed: 25,
-            startDelay: 1000,
+            startDelay: 2500,
             afterStep: (instance: any) => {
                 updateRender.setValue?.(instance.element.innerText.replace("|", ""));
             }
@@ -85,7 +88,7 @@ const i18n = getTranslations("en");
             .type("Dear [Firstname],<br>", { delay: 400 })
             .type("<br>", { delay: 400 })
             .type("Thank you very much for visiting our website! ", { delay: 1200 })
-            .type("You've just seen how to create a structured, predictable, and reusable document template.<br>", { delay: 1200 })
+            .type("You've just seen how to create a structured and reusable document template using Markdown.<br>", { delay: 1200 })
             .type("<br>", { delay: 400 })
             .type("Create your free account and bring superpowers to your documents! 🚀<br>", { delay: 400 })
             .type("<br>", { delay: 400 })

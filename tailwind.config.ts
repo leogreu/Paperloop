@@ -70,7 +70,11 @@ module.exports = {
     },
     safelist: [
         {
-            pattern: /text-.+/
+            pattern: /^text-.+$/
+        },
+        {
+            pattern: /^(w|mb)-\d+$/,
+            variants: ["prose-img"]
         }
     ],
     plugins: [

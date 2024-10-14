@@ -3,13 +3,13 @@ import "@/styles/globals.css";
 import { and, db, eq, Document } from "astro:db";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentMenu } from "@/components/ui/document-menu";
-import { Diff } from "diff";
+import { diffWords } from "diff";
 
 import Layout from "@/components/custom/layout.astro";
 import DocumentHeader from "@/components/custom/document-header.astro";
 import { defaultLocale, getClientTranslations, getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
 
-if (!Astro.locals.user) return Astro.redirect("/auth/login");
+if (!Astro.locals.user) return Astro.redirect("/auth");
 
 const { doc } = Astro.params;
 if (!doc) return;
@@ -19,7 +19,6 @@ const docs = await db.select().from(Document).where(
 );
 if (!docs) return;
 
-const diff = new Diff();
 const locale = getPreferredLocale(Astro.request.headers) ?? defaultLocale;
 const i18n = getTranslations(locale);
 
@@ -31,7 +30,7 @@ const client = getClientTranslations(locale);
     <div class="h-full flex flex-row-reverse gap-4 overflow-auto">
         {docs.reverse().map((doc, index, all) =>
             <a href={`/docs/${doc.id}`} transition:name={doc.id}>
-                <Card className="flex flex-col h-full w-96 overflow-auto cursor-pointer">
+                <Card className="flex flex-col h-full w-72 sm:w-96 md:w-[32rem] overflow-auto cursor-pointer">
                     <CardHeader>
                         <DocumentHeader doc={doc}>
                             <DocumentMenu
@@ -48,7 +47,7 @@ const client = getClientTranslations(locale);
                         <article
                             class="whitespace-pre-line"
                             set:html={
-                                diff.diff(all.at(index + 1)?.markdown ?? doc.markdown, doc.markdown)
+                                diffWords(all.at(index + 1)?.markdown ?? doc.markdown, doc.markdown)
                                     .map(entry => {
                                         const highlight = entry.added
                                             ? "text-green-600 underline"

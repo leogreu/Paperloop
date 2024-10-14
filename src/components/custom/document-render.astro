@@ -2,14 +2,14 @@
 import Particles from './particles.astro';
 
 export interface Props {
-    id?: string;
+    doc?: string;
     value?: string;
 }
 ---
 
 <div id="document-wrapper" class="max-w-prose mx-auto" transition:name="render">
     <Particles data={Astro.props}></Particles>
-    <article id="document-render" class="prose dark:prose-invert"></article>
+    <article id="document-render" class="prose dark:prose-invert prose-img:rounded-md"></article>
 </div>
 
 <script>
@@ -23,10 +23,10 @@ export interface Props {
         const render = document.getElementById("document-render");
         if (!wrapper || !render) return;
 
-        let { id, value = String() } = getParticles<Props>(wrapper);
+        let { doc, value = String() } = getParticles<Props>(wrapper);
 
         let values: Record<string, string> = {
-            ...(id && JSON.parse(localStorage.getItem(id) ?? "{}")),
+            ...(doc && JSON.parse(localStorage.getItem(doc) ?? "{}")),
             ...Object.fromEntries(new URLSearchParams(location.search))
         };
 
@@ -45,14 +45,14 @@ export interface Props {
         updateRender.setValues = input => {
             values = input;
             renderDocument();
-            if (id) localStorage.setItem(id, JSON.stringify(values));
+            if (doc) localStorage.setItem(doc, JSON.stringify(values));
         }
 
         render.addEventListener("input", ({ target }) => {
             if (target instanceof ContentEditable) {
                 const { value, placeholder } = target;
                 values[placeholder] = value;
-                if (id) localStorage.setItem(id, JSON.stringify(values));
+                if (doc) localStorage.setItem(doc, JSON.stringify(values));
 
                 // Update inputs sharing the same placeholder (i.e., variable name)
                 for (const element of render.querySelectorAll(`[placeholder="${placeholder}"]`)) {
@@ -64,7 +64,34 @@ export interface Props {
 </script>
 
 <style is:inline>
-    .prose h1, .prose h2, .prose h3, .prose p {
+    .prose h1, .prose h2, .prose h3, .prose p, .prose p[class] img {
         margin-top: 0;
+    }
+
+    .prose p[class] img {
+        display: inline-block;
+    }
+
+    .prose :not(pre) code {
+        padding: 0.125em 0.25em;;
+        border: 1px solid hsl(var(--border));
+        border-radius: 0.25em;
+        background-color: hsl(var(--secondary));
+    }
+
+    .prose code::before, .prose code::after {
+        content: "";
+    }
+
+    @media print {
+        @page {
+            margin: 2cm;
+        }
+
+        .prose hr {
+            visibility: hidden;
+            margin: unset;
+            page-break-after: always;
+        }
     }
 </style>

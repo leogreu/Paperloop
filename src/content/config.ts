@@ -4,5 +4,8 @@ export const collections = {
     translations: defineCollection({
         type: "data",
         schema: z.record(z.string())
+    }),
+    markdown: defineCollection({
+        type: "content"
     })
 };

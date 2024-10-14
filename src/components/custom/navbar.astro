@@ -1,20 +1,20 @@
 ---
-
-import { FileText } from "lucide-react";
-
 import { getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
 import AuthIsland from "./auth-island.astro";
+import Logo from "/favicon.svg?raw";
 
 const locale = getPreferredLocale(Astro.request.headers);
 const i18n = getTranslations(locale);
 ---
 
 <header
-    class="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-8"
+    class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-background/30 backdrop-blur-sm px-4 md:px-8"
 >
     <nav class="flex flex-row items-center gap-6 text-sm font-semibold">
         <a href="/" class="flex items-center gap-2 text-base font-bold">
-            <FileText className="h-6 w-6" />
+            <div class="flex h-6 w-6">
+                <Fragment set:html={Logo} />
+            </div>
             <span>Paperloop</span>
         </a>
         {Astro.locals.user &&

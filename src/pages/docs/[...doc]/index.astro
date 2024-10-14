@@ -1,10 +1,11 @@
 ---
 import "@/styles/globals.css";
 import { and, db, eq, Document } from "astro:db";
-import { Eraser, Maximize } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DocumentMenu } from "@/components/ui/document-menu";
+import { Eraser, Maximize } from "lucide-react";
 
 import Layout from "@/components/custom/layout.astro";
 import Particles from "@/components/custom/particles.astro";
@@ -13,7 +14,7 @@ import ContentEditable from "@/components/custom/content-editable.astro";
 import DocumentRender from "@/components/custom/document-render.astro";
 import { defaultLocale, getClientTranslations, getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
 
-if (!Astro.locals.user) return Astro.redirect("/auth/login");
+if (!Astro.locals.user) return Astro.redirect("/auth");
 
 const { doc } = Astro.params;
 if (!doc) return Astro.redirect("/404");
@@ -31,9 +32,12 @@ const client = getClientTranslations(locale);
 ---
 
 <Layout title={entry.name || i18n("new-document")} locale={locale}>
+    <Button id="mobile-toggle" slot="navbar" variant="outline" size="sm" className="lg:hidden">
+        {i18n("preview")}
+    </Button>
     <Particles data={{ id: entry.id, version: entry.version }}></Particles>
     <div class="h-full flex gap-4">
-        <div class="flex-1" transition:name={entry.id}>
+        <div id="editor-card" class="flex-1" transition:name={entry.id}>
             <Card className="h-full flex-1 overflow-auto">
                 <CardHeader>
                     <DocumentHeader doc={entry}>
@@ -51,13 +55,13 @@ const client = getClientTranslations(locale);
                     </DocumentHeader>
                 </CardHeader>
                 <CardContent>
-                    <article id="input" class="whitespace-pre-line" data-placeholder={i18n("write-something")}>
+                    <article id="editor" class="whitespace-pre-line" data-placeholder={i18n("write-something")}>
                         {entry.markdown}
                     </article>
                 </CardContent>
             </Card>
         </div>
-        <Card className="h-full flex-1 overflow-auto">
+        <Card id="preview-card" className="hidden lg:block h-full flex-1 overflow-auto">
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                     <span>
@@ -70,7 +74,7 @@ const client = getClientTranslations(locale);
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <DocumentRender id={entry.id}></DocumentRender>
+                <DocumentRender doc={entry.document} value={entry.markdown}></DocumentRender>
             </CardContent>
         </Card>
     </div>
@@ -87,16 +91,15 @@ const client = getClientTranslations(locale);
     import { debounce } from "@/utils/debounce";
 
     document.addEventListener("astro:page-load", () => {
-        const input = document.getElementById("input");
-        const output = document.getElementById("document-render");
-        if (!input || !output) return;
+        const editor = document.getElementById("editor");
+        if (!editor) return;
 
-        const fallback = input.getAttribute("data-placeholder") ?? String();
-        let value = input.textContent?.trim() ?? String();
-        input.textContent = String();
+        const fallback = editor.getAttribute("data-placeholder") ?? String();
+        let value = editor.textContent?.trim() ?? String();
+        editor.textContent = String();
 
         const { id, version } = getParticles<{ id: string; version?: number; }>();
-        const setMarkdown = debounce((value: string) => {
+        const updateDocument = debounce((value: string) => {
             actions.updateDocument({
                 id,
                 markdown: value
@@ -104,7 +107,7 @@ const client = getClientTranslations(locale);
         }, 1000);
 
         new EditorView({
-            parent: input,
+            parent: editor,
             doc: value,
             extensions: [
                 EditorView.lineWrapping,
@@ -115,14 +118,22 @@ const client = getClientTranslations(locale);
                 placeholder(fallback),
                 EditorView.editable.of(!version),
                 EditorView.updateListener.of(update => {
-                    if (update.docChanged || update.heightChanged) {
+                    if (update.docChanged) {
                         value = update.state.doc.toString();
-                        if (update.docChanged) setMarkdown(value);
-
                         updateRender.setValue?.(value);
+                        updateDocument(value);
                     }
                 })
             ]
+        });
+
+        const editorCard = document.getElementById("editor-card");
+        const previewCard = document.getElementById("preview-card");
+        document.querySelector("#mobile-toggle")?.addEventListener("click", () => {
+            for (const element of [editorCard, previewCard]) {
+                element?.classList.toggle("hidden");
+                element?.classList.toggle("lg:block");
+            }
         });
 
         const nameInput = document.querySelector("div[contenteditable]");

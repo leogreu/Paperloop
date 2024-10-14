@@ -8,16 +8,15 @@ import Empty from "@/components/custom/empty.astro";
 import DocumentHeader from "@/components/custom/document-header.astro";
 import { getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
 
-if (!Astro.locals.user) return Astro.redirect("/auth/login");
+if (!Astro.locals.user) return Astro.redirect("/auth");
 
 const docs = await db.select().from(Document)
     .where(eq(Document.user, Astro.locals.user.id))
-    .orderBy(desc(Document.version));
+    .orderBy(desc(Document.updated));
 
-const highesVersions = docs.reduce<typeof docs>((result, doc) => {
-    if (!result.some(entry => entry.document === doc.document)) result.push(doc);
-    return result;
-}, []);
+const distinct = docs.filter((doc, index) => {
+    return index === docs.findIndex(entry => entry.document === doc.document);
+});
 
 // Used to provide a language-specific meta alternate link for SEO
 const locale = Astro.url.searchParams.get("lang") ?? getPreferredLocale(Astro.request.headers);
@@ -25,9 +24,9 @@ const i18n = getTranslations(locale);
 ---
 
 <Layout title={i18n("my-documents")} locale={locale}>
-    {highesVersions.length
-        ? <div class="grid grid-cols-3 auto-rows-fr gap-4">
-            {highesVersions.map(doc =>
+    {distinct.length
+        ? <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 auto-rows-fr gap-4">
+            {distinct.map(doc =>
                 <a href={"docs/" + doc.id} transition:name={doc.id}>
                     <Card className="flex flex-col h-full cursor-pointer">
                         <CardHeader>
@@ -35,7 +34,7 @@ const i18n = getTranslations(locale);
                         </CardHeader>
                         <CardContent className="flex-1">
                             <article class="whitespace-pre-line line-clamp-3">
-                                {doc.markdown}
+                                {doc.markdown.slice(0, 200)}
                             </article>
                         </CardContent>
                         <CardFooter>

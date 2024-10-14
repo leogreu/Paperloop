@@ -8,7 +8,7 @@ import Layout from "@/components/custom/layout.astro";
 import DocumentRender from "@/components/custom/document-render.astro";
 import { defaultLocale, getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
 
-if (!Astro.locals.user) return Astro.redirect("/auth/login");
+if (!Astro.locals.user) return Astro.redirect("/auth");
 
 const { doc } = Astro.params;
 if (!doc) return Astro.redirect("/404");
@@ -28,7 +28,7 @@ const i18n = getTranslations(locale);
         {i18n("print")}
     </Button>
     <div class="mt-12">
-        <DocumentRender id={entry.id} value={entry.markdown}></DocumentRender>
+        <DocumentRender doc={entry.document} value={entry.markdown}></DocumentRender>
     </div>
 </Layout>
 
@@ -41,7 +41,7 @@ const i18n = getTranslations(locale);
 <style>
     @media print {
         div {
-            margin-top: 0;
+            margin: 0;
         }
     }
 </style>
