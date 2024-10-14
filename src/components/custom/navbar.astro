@@ -1,8 +1,6 @@
 ---
-import { actions } from "astro:actions";
-import { User, LogOut } from "lucide-react";
-import { Button } from "../ui/button";
 import { getPreferredLocale, getTranslations } from "@/utils/i18n.ts";
+import AuthIsland from "./auth-island.astro";
 import Logo from "/favicon.svg?raw";
 
 const locale = getPreferredLocale(Astro.request.headers);
@@ -28,44 +26,11 @@ const i18n = getTranslations(locale);
             </a>
         }
     </nav>
-    <nav class="flex flex-row ml-auto items-center gap-2 text-sm font-semibold">
+    <nav class="ml-auto flex items-center gap-2">
         <slot></slot>
-        {Astro.locals.user
-            ? <Button id="add" size="sm" variant="outline">
-                <span class="md:hidden">{i18n("new")}</span>
-                <span class="hidden md:block">{i18n("new-document")}</span>
-            </Button>
-            <form action={actions.auth} method="post" data-astro-reload>
-                <Button size="icon" variant="outline" className="h-9 w-9 rounded-full group">
-                    <User strokeWidth="2.25" className="h-4 w-4 group-hover:hidden" />
-                    <LogOut strokeWidth="2.25" className="hidden h-4 w-4 group-hover:block" />
-                </Button>
-            </form>
-            : <a href="/auth" data-astro-reload>
-                <Button size="sm" variant="secondary">
-                    <span>{i18n("login")}</span>
-                </Button>
-            </a>
-            <a href="/auth?type=register" data-astro-reload>
-                <Button size="sm">
-                    <span>{i18n("start-now")}</span>
-                </Button>
-            </a>
-        }
+        <AuthIsland server:defer></AuthIsland>
     </nav>
 </header>
-
-<script>
-    import { actions } from "astro:actions";
-    import { navigate } from "astro:transitions/client";
-
-    document.addEventListener("astro:page-load", () => {
-        document.querySelector("button#add")?.addEventListener("click", async () => {
-            const { data, error } = await actions.createDocument();
-            if (!error) navigate(`/docs/${data.id}`);
-        });
-    });
-</script>
 
 <style>
     @media print {

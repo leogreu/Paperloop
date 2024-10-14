@@ -18,5 +18,8 @@ export default defineConfig({
         tailwind({
             applyBaseStyles: false
         })
-    ]
+    ],
+    experimental: {
+        serverIslands: true
+    }
 });
