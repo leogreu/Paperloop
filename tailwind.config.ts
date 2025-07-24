@@ -75,6 +75,15 @@ module.exports = {
         {
             pattern: /^(w|mb)-\d+$/,
             variants: ["prose-img"]
+        },
+        {
+            pattern: /^border-.+$/
+        },
+        {
+            pattern: /^rounded-.+$/
+        },
+        {
+            pattern: /^bg-.+$/
         }
     ],
     plugins: [
