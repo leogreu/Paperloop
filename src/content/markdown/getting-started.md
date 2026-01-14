@@ -158,8 +158,8 @@ You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-gi
 
 ```
 ---
-top-left: Left-aligned header text
-bottom-center: Centered footer text
+top-center: Centered header text
+bottom-left: Left-aligned footer text
 ---
 ```
 
