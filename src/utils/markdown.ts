@@ -16,7 +16,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
         .replace(frontmatter, String())
         .replace(placeholders, (_, key) => {
             const value = values[key] ?? String();
-            return `<content-editable value="${value}" placeholder="${key}" underline></content-editable>`;
+            return `<content-editable class="not-prose" value="${value}" placeholder="${key}" underline></content-editable>`;
         });
 
     return md.render(replaced);
