@@ -36,6 +36,19 @@ export class ContentEditable extends HTMLElement {
                 :host([underline]) [contenteditable]:not(:empty) {
                     text-decoration: none;
                 }
+
+                [contenteditable]:empty {
+                    min-width: 7.5rem;
+                    min-height: 1.25rem;
+                    background-color: color-mix(in srgb, hsl(var(--placeholder)), white 50%);
+                    border-radius: var(--radius);
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                [contenteditable]:empty:before {
+                    content: "";
+                }
             }
         `;
     }
