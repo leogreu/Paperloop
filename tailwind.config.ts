@@ -75,6 +75,12 @@ module.exports = {
         {
             pattern: /^(w|mb)-\d+$/,
             variants: ["prose-img"]
+        },
+        {
+            pattern: /^(block|inline-block)$/
+        },
+        {
+            pattern: /^(h|min-h)-(\d+|px|full|screen|fit|auto)$/
         }
     ],
     plugins: [

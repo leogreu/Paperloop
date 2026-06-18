@@ -8,17 +8,25 @@ const md = markdownit({
 }).use(attrs);
 
 const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
-const placeholders = /\[(\S+)\](?!\()/g;
+const placeholders = /\[(\S+?)\](?!\()(?:\{([^}]*)\})?/g;
 
 const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
+
+// Turns a trailing {.foo .bar} attribute block into a class list (e.g. "foo bar")
+const parseClasses = (attributes?: string) => (attributes ?? String())
+    .split(/\s+/)
+    .map(token => token.replace(/^\./, String()))
+    .filter(Boolean)
+    .join(" ");
 
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     // TODO: Evaluate whether to create markdown-it plugin
     const replaced = value
         .replace(frontmatter, String())
-        .replace(placeholders, (_, key) => {
+        .replace(placeholders, (_, key, attributes) => {
             const value = values[key] ?? String();
-            return `<content-editable class="not-prose" value="${encodeAttribute(value)}" placeholder="${encodeAttribute(key)}" underline></content-editable>`;
+            const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
+            return `<content-editable class="${encodeAttribute(classes)}" value="${encodeAttribute(value)}" placeholder="${encodeAttribute(key)}" underline></content-editable>`;
         });
 
     return md.render(replaced);

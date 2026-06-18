@@ -9,13 +9,14 @@ export class ContentEditable extends HTMLElement {
             :host {
                 display: inline-block;
                 min-width: 1rem;
+                min-height: 1.25rem;
             }
 
             [contenteditable] {
                 outline: none;
                 cursor: text;
+                min-height: inherit;
             }
-
 
             [contenteditable]:empty:before {
                 content: attr(placeholder);
@@ -39,7 +40,6 @@ export class ContentEditable extends HTMLElement {
 
                 [contenteditable]:empty {
                     min-width: 7.5rem;
-                    min-height: 1.25rem;
                     background-color: color-mix(in srgb, hsl(var(--placeholder)), white 50%);
                     border-radius: var(--radius);
                     -webkit-print-color-adjust: exact;
