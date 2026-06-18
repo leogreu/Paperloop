@@ -10,13 +10,15 @@ const md = markdownit({
 const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
 const placeholders = /\[(\S+)\](?!\()/g;
 
+const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
+
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     // TODO: Evaluate whether to create markdown-it plugin
     const replaced = value
         .replace(frontmatter, String())
         .replace(placeholders, (_, key) => {
             const value = values[key] ?? String();
-            return `<content-editable class="not-prose" value="${value}" placeholder="${key}" underline></content-editable>`;
+            return `<content-editable class="not-prose" value="${encodeAttribute(value)}" placeholder="${encodeAttribute(key)}" underline></content-editable>`;
         });
 
     return md.render(replaced);
