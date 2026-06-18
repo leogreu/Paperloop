@@ -8,6 +8,7 @@ export class ContentEditable extends HTMLElement {
         return `
             :host {
                 display: inline-block;
+                min-width: 1rem;
             }
 
             [contenteditable] {
