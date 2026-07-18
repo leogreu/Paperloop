@@ -27,6 +27,10 @@ export class ContentEditable extends HTMLElement {
                 text-decoration: underline;
             }
 
+            :host([readonly]) [contenteditable] {
+                cursor: default;
+            }
+
             span {
                 padding: .25rem .5rem;
                 background-color: hsl(var(--secondary));
@@ -56,7 +60,7 @@ export class ContentEditable extends HTMLElement {
     render() {
         this.shadowRoot!.innerHTML = `
             <style>${this.styles}</style>
-            <div placeholder="${this.placeholder}" contenteditable="plaintext-only">${this.value}</div>
+            <div placeholder="${this.placeholder}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${this.value}</div>
         `;
     }
 

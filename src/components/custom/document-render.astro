@@ -14,7 +14,7 @@ export interface Props {
 
 <script>
     import { getParticles } from "@/utils/particles";
-    import { markdownToHTML, updateRender } from "@/utils/markdown";
+    import { markdownToHTML, updateComputed, updateRender } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
 
@@ -33,6 +33,7 @@ export interface Props {
         // Intial render
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);
+            updateComputed(render!, values);
 
             // Lift optional-toggle state to the containing block (paragraph, bullet, or table row)
             for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
@@ -79,6 +80,8 @@ export interface Props {
                 for (const element of render.querySelectorAll(`[placeholder="${placeholder}"]`)) {
                     if (element !== target) element.setAttribute("value", value);
                 }
+
+                updateComputed(render, values);
             }
         });
 
