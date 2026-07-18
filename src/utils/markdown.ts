@@ -18,7 +18,10 @@ const suffix = String.raw`(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?`;
 const computed = new RegExp(String.raw`\[([^\s=\]]+)=([^\]]+?)${suffix}`, "g");
 const placeholders = new RegExp(String.raw`\[([^\s:\]]+)${suffix}`, "g");
 
-export const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
+export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
+
+// Additionally encodes line breaks, which would otherwise break inline HTML during markdown parsing
+export const encodeAttribute = (value: string) => encodeHTML(value).replace(/\r\n?|\n/g, "&#10;");
 
 // Turns a trailing {.foo .bar} attribute block into a class list (e.g. "foo bar")
 const parseClasses = (attributes?: string) => (attributes ?? String())

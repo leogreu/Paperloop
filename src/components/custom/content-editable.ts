@@ -1,4 +1,4 @@
-import { applyFormat, encodeAttribute } from "@/utils/markdown";
+import { applyFormat, encodeHTML } from "@/utils/markdown";
 
 export class ContentEditable extends HTMLElement {
     static observedAttributes = ["value", "placeholder"];
@@ -68,7 +68,7 @@ export class ContentEditable extends HTMLElement {
     render() {
         this.shadowRoot!.innerHTML = `
             <style>${this.styles}</style>
-            <div placeholder="${encodeAttribute(this.placeholder)}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${encodeAttribute(this.display)}</div>
+            <div placeholder="${encodeHTML(this.placeholder)}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${encodeHTML(this.display)}</div>
         `;
     }
 
@@ -108,7 +108,7 @@ export class ContentEditable extends HTMLElement {
     }
 
     highlightTag() {
-        this.content.innerHTML = encodeAttribute(this.display).replace(/(#[^\s]+)/g, "<span>$1</span>");
+        this.content.innerHTML = encodeHTML(this.display).replace(/(#[^\s]+)/g, "<span>$1</span>");
     }
 }
 
