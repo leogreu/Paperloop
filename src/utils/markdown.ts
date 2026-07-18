@@ -46,14 +46,14 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
     return md.render(replaced);
 };
 
-const formatNumber = (value: number, decimals = 2) => new Intl.NumberFormat(navigator.language, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
+const currency = (value: number, currency = "EUR", locale = navigator.language) => new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency
 }).format(value);
 
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
-    const scope: Record<string, unknown> = { formatNumber };
+    const scope: Record<string, unknown> = { currency };
     for (const [key, value] of Object.entries(values)) {
         const numeric = Number(value.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2"));
         if (value.trim() && !key.startsWith("?")) scope[key] = isNaN(numeric) ? value : numeric;

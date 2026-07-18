@@ -154,9 +154,9 @@ For paragraphs spanning multiple lines, you can also place the marker on its own
 
 You can calculate values from other placeholders by writing an expression after a `=` sign. Results update live as you fill in the referenced placeholders.
 
-**Example:** The net price is [Net] €, so the gross price is [Gross=formatNumber(Net*1.19)] €.
+**Example:** The net price is [Net] €, so the gross price is [Gross=currency(Net*1.19)].
 
-Use `formatNumber(value)` to format the result according to your locale; an optional second argument sets the number of decimal places, e.g. `formatNumber(value, 0)`. Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions.
+Use `currency(value)` to display the result as a formatted currency amount. Two optional arguments set the currency and the language, e.g. `currency(value, "USD", "en-US")` — by default, Euro and your browser language are used. Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions.
 
 ## 13. Alignment {#alignment}
 
