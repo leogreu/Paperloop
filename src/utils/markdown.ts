@@ -9,13 +9,16 @@ const md = markdownit({
 }).use(attrs);
 
 const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
+
 // Optionally consumes the line break after a standalone marker so it attaches to the following paragraph or heading
 const optionals = /\[\?(\S+?)\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/g;
-// Both allow a trailing :format suffix (e.g. :currency("EUR", "de")) that only affects the display
-const computed = /\[([^\s=\]]+)=([^\]]+?)(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?/g;
-const placeholders = /\[([^\s:\]]+)(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?/g;
 
-const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
+// Shared trailing part with an optional display-only format suffix, closing bracket, and attribute block
+const suffix = String.raw`(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?`;
+const computed = new RegExp(String.raw`\[([^\s=\]]+)=([^\]]+?)${suffix}`, "g");
+const placeholders = new RegExp(String.raw`\[([^\s:\]]+)${suffix}`, "g");
+
+export const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
 
 // Turns a trailing {.foo .bar} attribute block into a class list (e.g. "foo bar")
 const parseClasses = (attributes?: string) => (attributes ?? String())
@@ -23,6 +26,16 @@ const parseClasses = (attributes?: string) => (attributes ?? String())
     .map(token => token.replace(/^\./, String()))
     .filter(Boolean)
     .join(" ");
+
+// Emits a <content-editable> element with the given attributes, skipping undefined ones
+const renderEditable = (attributes: string | undefined, properties: Record<string, string | undefined>, flags: string) => {
+    const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
+    const entries = Object.entries({ class: classes, ...properties })
+        .flatMap(([key, value]) => value !== undefined ? `${key}="${encodeAttribute(value)}"` : [])
+        .join(" ");
+
+    return `<content-editable ${entries} ${flags}></content-editable>`;
+};
 
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     // TODO: Evaluate whether to create markdown-it plugin
@@ -34,22 +47,15 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             return `${heading ?? String()}<input type="checkbox" class="optional-toggle not-prose" data-optional="${encodeAttribute(key)}"${checked}> `;
         })
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
-        .replace(computed, (_, key, expression, format, attributes) => {
-            const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
-            const formatted = format ? ` format="${encodeAttribute(format)}"` : String();
-            return `<content-editable class="${encodeAttribute(classes)}" expression="${encodeAttribute(expression)}" placeholder="${encodeAttribute(key)}"${formatted} readonly></content-editable>`;
-        })
-        .replace(placeholders, (_, key, format, attributes) => {
-            const value = values[key] ?? String();
-            const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
-            const formatted = format ? ` format="${encodeAttribute(format)}"` : String();
-            return `<content-editable class="${encodeAttribute(classes)}" value="${encodeAttribute(value)}" placeholder="${encodeAttribute(key)}"${formatted} underline></content-editable>`;
-        });
+        .replace(computed, (_, key, expression, format, attributes) =>
+            renderEditable(attributes, { expression, placeholder: key, format }, "readonly"))
+        .replace(placeholders, (_, key, format, attributes) =>
+            renderEditable(attributes, { value: values[key] ?? String(), placeholder: key, format }, "underline"));
 
     return md.render(replaced);
 };
 
-const currency = (value: number, currency = "EUR", locale = navigator.language) => new Intl.NumberFormat(locale, {
+const currency = (value: number, currency = "USD", locale = navigator.language) => new Intl.NumberFormat(locale, {
     style: "currency",
     currency
 }).format(value);
@@ -78,24 +84,23 @@ export const applyFormat = (value: unknown, expression: string) => {
 
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
-    const scope: Record<string, unknown> = { currency };
+    const scope: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(values)) {
         if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
     }
 
     for (const element of root.querySelectorAll("content-editable[expression]")) {
-        let display = String();
+        let value = String();
         try {
             const result = evaluate(element.getAttribute("expression") ?? String(), scope);
             scope[element.getAttribute("placeholder") ?? String()] = result;
-
-            const formatted = element.getAttribute("format");
-            display = formatted ? applyFormat(result, formatted)
-                : typeof result === "number" ? format(result, { precision: 14 }) : String(result);
+            value = typeof result === "number" ? format(result, { precision: 14 }) : String(result);
         } catch {
             // Unresolvable (e.g., empty inputs): keep empty so the name is shown instead
         }
-        element.setAttribute("value", display);
+
+        // Store the raw result (the display getter applies any :format suffix), and only when changed
+        if (element.getAttribute("value") !== value) element.setAttribute("value", value);
     }
 };
 
