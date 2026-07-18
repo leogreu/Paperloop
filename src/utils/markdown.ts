@@ -37,7 +37,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
         .replace(computed, (_, key, expression, format, attributes) => {
             const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
             const formatted = format ? ` format="${encodeAttribute(format)}"` : String();
-            return `<content-editable class="${encodeAttribute(classes)}" expression="${encodeAttribute(expression)}" placeholder="${encodeAttribute(key)}"${formatted} underline readonly></content-editable>`;
+            return `<content-editable class="${encodeAttribute(classes)}" expression="${encodeAttribute(expression)}" placeholder="${encodeAttribute(key)}"${formatted} readonly></content-editable>`;
         })
         .replace(placeholders, (_, key, format, attributes) => {
             const value = values[key] ?? String();
