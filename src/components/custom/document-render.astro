@@ -33,6 +33,27 @@ export interface Props {
         // Intial render
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);
+
+            // Lift optional-toggle state to the containing block (paragraph, bullet, or table row)
+            for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
+                const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
+                if (!block || block.hasAttribute("data-optional")) continue;
+
+                // A marker in a heading toggles the whole section, up to the next same- or higher-level heading
+                const section = [block];
+                if (/^H[1-6]$/.test(block.tagName)) {
+                    let sibling = block.nextElementSibling;
+                    while (sibling && !(/^H[1-6]$/.test(sibling.tagName) && sibling.tagName <= block.tagName)) {
+                        section.push(sibling);
+                        sibling = sibling.nextElementSibling;
+                    }
+                }
+
+                for (const element of section) {
+                    element.setAttribute("data-optional", input.dataset.optional ?? String());
+                    element.classList.toggle("excluded", !input.checked);
+                }
+            }
         }
         renderDocument();
 
@@ -60,6 +81,16 @@ export interface Props {
                 }
             }
         });
+
+        render.addEventListener("change", ({ target }) => {
+            if (target instanceof HTMLInputElement && target.classList.contains("optional-toggle")) {
+                const key = `?${target.dataset.optional}`;
+                if (target.checked) values[key] = "true";
+                else delete values[key];
+                if (doc) localStorage.setItem(doc, JSON.stringify(values));
+                renderDocument();
+            }
+        });
     });
 </script>
 
@@ -81,6 +112,15 @@ export interface Props {
 
     .prose code::before, .prose code::after {
         content: "";
+    }
+
+    .prose .optional-toggle {
+        cursor: pointer;
+        accent-color: hsl(var(--muted-foreground));
+    }
+
+    .prose [data-optional].excluded {
+        opacity: 0.4;
     }
 
     @media print {
@@ -119,6 +159,19 @@ export interface Props {
             visibility: hidden;
             margin: unset;
             page-break-after: always;
+        }
+
+        .optional-toggle {
+            display: none;
+        }
+
+        [data-optional].excluded {
+            display: none;
+        }
+
+        /* Avoids a stray border when trailing table rows are excluded */
+        .prose tbody tr:not(:has(~ tr:not(.excluded))) {
+            border-bottom-width: 0;
         }
     }
 </style>
