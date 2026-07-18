@@ -132,7 +132,25 @@ When you use a placeholder with the same variable name, it will get the same val
 
 **Example:** Thank you for reading this, [Name].
 
-## 11. Alignment {#alignment}
+## 11. Optional blocks
+
+Sometimes a paragraph, bullet point, or table row only applies to some documents. Mark it optional by starting it with `[?name]`, and it will show a checkbox in the rendered document. Unchecked blocks appear faded and are left out entirely when printing, while checked blocks print like normal content.
+
+[?self-hosting] This paragraph is only included if self-hosting is selected.
+
+- Regular item
+- [?self-hosting] Optional item
+
+| Service | Price |
+|---------|-------|
+| Base setup | 250 € |
+| [?self-hosting] On-premise setup | 500 € |
+
+Blocks with the same name are toggled together — just like placeholders sharing a value. Your choices are saved per document.
+
+For paragraphs spanning multiple lines, you can also place the marker on its own line directly above the text. And if you place it in front of a heading (or inside it, like `## [?name] Title`), the entire section is toggled — from the heading up to the next heading of the same or a higher level.
+
+## 12. Alignment {#alignment}
 
 Paperloop also allows you to align text using [Tailwind CSS](https://tailwindcss.com/) classes. If you want a sentence or word to be right-aligned, simple add `{.text-right}` to the end.
 
@@ -152,7 +170,7 @@ John Doe
 Metropolis, CA 90210
 {.text-right .prose-img:w-8 .prose-img:mb-2}
 
-## 12. Headers and footers
+## 13. Headers and footers
 
 You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-github-docs/using-yaml-frontmatter) to add headers and footers to your pages when printing a document. To do this, add the following block to the beginning of your document.
 
