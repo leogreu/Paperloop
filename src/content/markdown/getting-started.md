@@ -150,7 +150,15 @@ Blocks with the same name are toggled together — just like placeholders sharin
 
 For paragraphs spanning multiple lines, you can also place the marker on its own line directly above the text. And if you place it in front of a heading (or inside it, like `## [?name] Title`), the entire section is toggled — from the heading up to the next heading of the same or a higher level.
 
-## 12. Alignment {#alignment}
+## 12. Calculations
+
+You can calculate values from other placeholders by writing an expression after a `=` sign. Results update live as you fill in the referenced placeholders.
+
+**Example:** The net price is [Net:currency], so the gross price is [Gross=Net*1.19:currency].
+
+Append `:currency` to a placeholder or calculation to display it as a currency amount — the raw number stays available for further calculations, and inputs switch back to the raw value while you edit them. Two optional arguments set the currency and the language, e.g. `:currency("EUR", "de")` — by default, USD and your browser language are used. Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions.
+
+## 13. Alignment {#alignment}
 
 Paperloop also allows you to align text using [Tailwind CSS](https://tailwindcss.com/) classes. If you want a sentence or word to be right-aligned, simple add `{.text-right}` to the end.
 
@@ -170,7 +178,7 @@ John Doe
 Metropolis, CA 90210
 {.text-right .prose-img:w-8 .prose-img:mb-2}
 
-## 13. Headers and footers
+## 14. Headers and footers
 
 You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-github-docs/using-yaml-frontmatter) to add headers and footers to your pages when printing a document. To do this, add the following block to the beginning of your document.
 

@@ -1,5 +1,6 @@
 import markdownit from "markdown-it";
 import attrs from "markdown-it-attrs";
+import { evaluate, format } from "mathjs/number";
 import { parse } from "yaml";
 
 const md = markdownit({
@@ -8,11 +9,16 @@ const md = markdownit({
 }).use(attrs);
 
 const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
+
 // Optionally consumes the line break after a standalone marker so it attaches to the following paragraph or heading
 const optionals = /\[\?(\S+?)\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/g;
-const placeholders = /\[(\S+?)\](?!\()(?:\{([^}]*)\})?/g;
 
-const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
+// Shared trailing part with an optional display-only format suffix, closing bracket, and attribute block
+const suffix = String.raw`(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?`;
+const computed = new RegExp(String.raw`\[([^\s=\]]+)=([^\]]+?)${suffix}`, "g");
+const placeholders = new RegExp(String.raw`\[([^\s:\]]+)${suffix}`, "g");
+
+export const encodeAttribute = (value: string) => md.utils.escapeHtml(value).replace(/\r\n?|\n/g, "&#10;");
 
 // Turns a trailing {.foo .bar} attribute block into a class list (e.g. "foo bar")
 const parseClasses = (attributes?: string) => (attributes ?? String())
@@ -20,6 +26,16 @@ const parseClasses = (attributes?: string) => (attributes ?? String())
     .map(token => token.replace(/^\./, String()))
     .filter(Boolean)
     .join(" ");
+
+// Emits a <content-editable> element with the given attributes, skipping undefined ones
+const renderEditable = (attributes: string | undefined, properties: Record<string, string | undefined>, flags: string) => {
+    const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
+    const entries = Object.entries({ class: classes, ...properties })
+        .flatMap(([key, value]) => value !== undefined ? `${key}="${encodeAttribute(value)}"` : [])
+        .join(" ");
+
+    return `<content-editable ${entries} ${flags}></content-editable>`;
+};
 
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     // TODO: Evaluate whether to create markdown-it plugin
@@ -30,13 +46,62 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             const checked = values[`?${key}`] ? " checked" : String();
             return `${heading ?? String()}<input type="checkbox" class="optional-toggle not-prose" data-optional="${encodeAttribute(key)}"${checked}> `;
         })
-        .replace(placeholders, (_, key, attributes) => {
-            const value = values[key] ?? String();
-            const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
-            return `<content-editable class="${encodeAttribute(classes)}" value="${encodeAttribute(value)}" placeholder="${encodeAttribute(key)}" underline></content-editable>`;
-        });
+        // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
+        .replace(computed, (_, key, expression, format, attributes) =>
+            renderEditable(attributes, { expression, placeholder: key, format }, "readonly"))
+        .replace(placeholders, (_, key, format, attributes) =>
+            renderEditable(attributes, { value: values[key] ?? String(), placeholder: key, format }, "underline"));
 
     return md.render(replaced);
+};
+
+const currency = (value: number, currency = "USD", locale = navigator.language) => new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency
+}).format(value);
+
+// Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
+const toNumber = (value: string) => {
+    const normalized = value.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
+    const numeric = Number(normalized);
+    return normalized && !isNaN(numeric) ? numeric : value;
+};
+
+// Applies a :format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
+export const applyFormat = (value: unknown, expression: string) => {
+    const input = typeof value === "string" ? toNumber(value) : value;
+    if (typeof input !== "number") return String(value ?? String());
+
+    try {
+        const result = evaluate(expression, {
+            currency: (code?: string, locale?: string) => currency(input, code, locale)
+        });
+        return String(typeof result === "function" ? result() : result);
+    } catch {
+        return String(value);
+    }
+};
+
+// Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
+export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
+    const scope: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(values)) {
+        if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+    }
+
+    for (const element of root.querySelectorAll("content-editable[expression]")) {
+        let value = String();
+        try {
+            const result = evaluate(element.getAttribute("expression") ?? String(), scope);
+            scope[element.getAttribute("placeholder") ?? String()] = result;
+            value = typeof result === "number" ? format(result, { precision: 14 }) : String(result);
+        } catch {
+            // Unresolvable (e.g., empty inputs): keep empty so the name is shown instead
+        }
+
+        // Store the raw result (the display getter applies any :format suffix), and only when changed
+        if (element.getAttribute("value") !== value) element.setAttribute("value", value);
+    }
 };
 
 export const parseFrontmatter = (value: string) => {

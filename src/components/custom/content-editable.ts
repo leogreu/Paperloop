@@ -1,8 +1,16 @@
+import { applyFormat, encodeAttribute } from "@/utils/markdown";
+
 export class ContentEditable extends HTMLElement {
     static observedAttributes = ["value", "placeholder"];
 
     value = String();
     placeholder = String();
+
+    // The formatted representation shown while not editing; the raw value stays in `value`
+    get display() {
+        const format = this.getAttribute("format");
+        return format && this.value ? applyFormat(this.value, format) : this.value;
+    }
 
     get styles() {
         return `
@@ -25,6 +33,10 @@ export class ContentEditable extends HTMLElement {
 
             :host([underline]) [contenteditable]:not(:empty) {
                 text-decoration: underline;
+            }
+
+            :host([readonly]) [contenteditable] {
+                cursor: default;
             }
 
             span {
@@ -56,7 +68,7 @@ export class ContentEditable extends HTMLElement {
     render() {
         this.shadowRoot!.innerHTML = `
             <style>${this.styles}</style>
-            <div placeholder="${this.placeholder}" contenteditable="plaintext-only">${this.value}</div>
+            <div placeholder="${encodeAttribute(this.placeholder)}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${encodeAttribute(this.display)}</div>
         `;
     }
 
@@ -73,6 +85,20 @@ export class ContentEditable extends HTMLElement {
         });
 
         this.addEventListener("blur", this.highlightTag);
+
+        // Formatted values are edited raw, like spreadsheet cells
+        this.addEventListener("focus", () => {
+            if (this.hasAttribute("format") && this.content.textContent !== this.value) {
+                this.content.textContent = this.value;
+
+                const range = document.createRange();
+                range.selectNodeContents(this.content);
+                range.collapse(false);
+                const selection = window.getSelection();
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+            }
+        });
     }
 
     attributeChangedCallback(name: string, _: string, value: string) {
@@ -82,7 +108,7 @@ export class ContentEditable extends HTMLElement {
     }
 
     highlightTag() {
-        this.content.innerHTML = this.value.replace(/(#[^\s]+)/g, "<span>$1</span>");
+        this.content.innerHTML = encodeAttribute(this.display).replace(/(#[^\s]+)/g, "<span>$1</span>");
     }
 }
 
