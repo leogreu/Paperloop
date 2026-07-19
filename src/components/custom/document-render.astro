@@ -132,10 +132,7 @@ export interface Props {
     /* Excluded entries drop out of the list numbering, matching the printed output */
     .prose ol > li[data-optional].excluded {
         counter-increment: list-item 0;
-    }
-
-    .prose ol > li[data-optional].excluded::marker {
-        content: "";
+        list-style: none;
     }
 
     @media print {
