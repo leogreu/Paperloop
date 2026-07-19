@@ -44,6 +44,7 @@ const renderEditable = (attributes: string | undefined, properties: Record<strin
 
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     // TODO: Evaluate whether to create markdown-it plugin
+    const fallbacks: Record<string, [string, string]> = {};
     const replaced = value
         .replace(frontmatter, String())
         // Must run before the placeholder pass, which would otherwise consume [?name] tokens
@@ -54,13 +55,18 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
         .replace(computed, (_, key, expression, format, attributes) =>
             renderEditable(attributes, { expression, placeholder: key, format }, "readonly"))
-        .replace(placeholders, (_, key, assign, fallback, format, attributes) =>
-            renderEditable(attributes, {
+        .replace(placeholders, (_, key, assign, fallback, format, attributes) => {
+            // A fallback applies to every occurrence of its placeholder, defined at the first one
+            if (fallback) fallbacks[key] = [assign, fallback];
+            else [assign, fallback] = fallbacks[key] ?? [assign, fallback];
+
+            return renderEditable(attributes, {
                 value: values[key] ?? (assign ? fallback : String()),
                 placeholder: key,
                 [assign ? "default" : "fallback"]: fallback,
                 format
-            }, "underline"));
+            }, "underline");
+        });
 
     return md.render(replaced);
 };
