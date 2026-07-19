@@ -105,11 +105,14 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
         if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
     }
 
-    // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered
+    // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered,
+    // unless they sit in an excluded optional block (requires the lift pass to have run before)
     for (const element of root.querySelectorAll("content-editable[fallback], content-editable[default]")) {
         const key = element.getAttribute("placeholder") ?? String();
         const preset = element.getAttribute("default");
-        scope[key] ??= preset !== null && values[key] === undefined ? toNumber(preset) : 0;
+        scope[key] ??= preset !== null && values[key] === undefined && !element.closest(".excluded")
+            ? toNumber(preset)
+            : 0;
     }
 
     for (const element of root.querySelectorAll("content-editable[expression]")) {
@@ -135,27 +138,32 @@ const firstText = (element: Element) => [...element.childNodes].find(
 const numbered = /^(\s*)(\d+(?:\.\d+)*)(\.?)\s/;
 
 // Renumbers headings and table rows with numeric prefixes; excluded blocks are skipped and lose
-// their number, so the visible numbering always matches the printed output
+// their number, so the visible numbering always matches the printed output. Only applies where
+// optional blocks are actually involved, leaving purely static numbering untouched
 export const updateNumbering = (root: ParentNode) => {
     const counters: Record<number, number> = {};
-    for (const heading of root.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
-        const level = Number(heading.tagName[1]);
-        for (const key of Object.keys(counters)) if (Number(key) > level) delete counters[Number(key)];
+    if (root.querySelector(":is(h1, h2, h3, h4, h5, h6)[data-optional]")) {
+        for (const heading of root.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+            const text = firstText(heading);
+            const match = text?.textContent?.match(numbered);
+            if (!text || !match) continue;
 
-        const text = firstText(heading);
-        const match = text?.textContent?.match(numbered);
-        if (!text || !match) continue;
+            const level = Number(heading.tagName[1]);
+            for (const key of Object.keys(counters)) if (Number(key) > level) delete counters[Number(key)];
 
-        if (heading.classList.contains("excluded")) {
-            text.textContent = text.textContent!.replace(numbered, match[1]);
-        } else {
-            counters[level] = (counters[level] ?? 0) + 1;
-            const components = Object.keys(counters).map(Number).sort((a, b) => a - b).map(key => counters[key]);
-            text.textContent = text.textContent!.replace(numbered, `${match[1]}${components.join(".")}${match[3]} `);
+            if (heading.classList.contains("excluded")) {
+                text.textContent = text.textContent!.replace(numbered, match[1]);
+            } else {
+                counters[level] = (counters[level] ?? 0) + 1;
+                const components = Object.keys(counters).map(Number).sort((a, b) => a - b).map(key => counters[key]);
+                text.textContent = text.textContent!.replace(numbered, `${match[1]}${components.join(".")}${match[3]} `);
+            }
         }
     }
 
     for (const body of root.querySelectorAll("tbody")) {
+        if (!body.querySelector("[data-optional]")) continue;
+
         let count = 0;
         for (const row of body.querySelectorAll("tr")) {
             const cell = row.querySelector("td");

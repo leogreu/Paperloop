@@ -33,9 +33,9 @@ export interface Props {
         // Intial render
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);
-            updateComputed(render!, values);
 
-            // Lift optional-toggle state to the containing block (paragraph, bullet, or table row)
+            // Lift optional-toggle state to the containing block (paragraph, bullet, or table row);
+            // must run first, as updateComputed and updateNumbering read the resulting classes
             for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
                 const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
                 if (!block || block.hasAttribute("data-optional")) continue;
@@ -56,6 +56,7 @@ export interface Props {
                 }
             }
 
+            updateComputed(render!, values);
             updateNumbering(render!);
         }
         renderDocument();
