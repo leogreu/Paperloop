@@ -70,6 +70,11 @@ const currency = (value: number, currency = "USD", locale = navigator.language) 
     currency
 }).format(value);
 
+const formatNumber = (value: number, decimals?: number, locale = navigator.language) => new Intl.NumberFormat(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+}).format(value);
+
 // Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
 const toNumber = (value: string) => {
     const normalized = value.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
@@ -84,7 +89,8 @@ export const applyFormat = (value: unknown, expression: string) => {
 
     try {
         const result = evaluate(expression, {
-            currency: (code?: string, locale?: string) => currency(input, code, locale)
+            currency: (code?: string, locale?: string) => currency(input, code, locale),
+            format: (decimals?: number, locale?: string) => formatNumber(input, decimals, locale)
         });
         return String(typeof result === "function" ? result() : result);
     } catch {

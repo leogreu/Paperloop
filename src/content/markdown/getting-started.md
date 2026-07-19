@@ -156,7 +156,7 @@ You can calculate values from other placeholders by writing an expression after 
 
 **Example:** The net price is [Net:currency], so the gross price is [Gross=Net*1.19:currency].
 
-Append `:currency` to a placeholder or calculation to display it as a currency amount — the raw number stays available for further calculations, and inputs switch back to the raw value while you edit them. Two optional arguments set the currency and the language, e.g. `:currency("EUR", "de")` — by default, USD and your browser language are used. Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions.
+Append `:currency` to a placeholder or calculation to display it as a currency amount — the raw number stays available for further calculations, and inputs switch back to the raw value while you edit them. Two optional arguments set the currency and the language, e.g. `:currency("EUR", "de")` — by default, USD and your browser language are used. Similarly, append `:format` to display a plain formatted number, with optional arguments for the number of decimal places and the language, e.g. `:format(2, "de")`. Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions.
 
 For optional placeholders, append `??` with a fallback value that is shown and printed while the placeholder is empty — but counts as zero in calculations until you actually fill in the field. With `??=` the value is considered in calculations right away instead.
 
