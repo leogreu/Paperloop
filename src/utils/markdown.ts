@@ -16,9 +16,9 @@ const optionals = /\[\?(\S+?)\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/
 // Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
 const formats = "currency|format";
-const suffix = String.raw`(?::((?:${formats})\([^\]]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
-const computed = new RegExp(String.raw`\[([^\s=?\]]+)=([^\]]+?)${suffix}`, "g");
-const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]]+?))?${suffix}`, "g");
+const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
+const computed = new RegExp(String.raw`\[([^\s=?\]]+)=([^\]\r\n]+?)${suffix}`, "g");
+const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]+?))?${suffix}`, "g");
 
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
 
