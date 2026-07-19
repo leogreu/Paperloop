@@ -158,7 +158,7 @@ export const updateNumbering = (root: ParentNode) => {
             for (const key of Object.keys(counters)) if (Number(key) > level) delete counters[Number(key)];
 
             if (heading.classList.contains("excluded")) {
-                text.textContent = text.textContent!.replace(numbered, match[1]);
+                text.textContent = text.textContent!.replace(numbered, `${match[1]}#${match[3]} `);
             } else {
                 counters[level] = (counters[level] ?? 0) + 1;
                 const components = Object.keys(counters).map(Number).sort((a, b) => a - b).map(key => counters[key]);
@@ -178,7 +178,7 @@ export const updateNumbering = (root: ParentNode) => {
             if (!text || !match) continue;
 
             text.textContent = row.classList.contains("excluded")
-                ? match[1]
+                ? `${match[1]}#${match[3]}`
                 : `${match[1]}${++count}${match[3]}`;
         }
     }
