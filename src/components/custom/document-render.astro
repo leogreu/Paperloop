@@ -14,7 +14,7 @@ export interface Props {
 
 <script>
     import { getParticles } from "@/utils/particles";
-    import { markdownToHTML, updateComputed, updateRender } from "@/utils/markdown";
+    import { markdownToHTML, updateComputed, updateNumbering, updateRender } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
 
@@ -33,9 +33,9 @@ export interface Props {
         // Intial render
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);
-            updateComputed(render!, values);
 
-            // Lift optional-toggle state to the containing block (paragraph, bullet, or table row)
+            // Lift optional-toggle state to the containing block (paragraph, bullet, or table row);
+            // must run first, as updateComputed and updateNumbering read the resulting classes
             for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
                 const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
                 if (!block || block.hasAttribute("data-optional")) continue;
@@ -55,6 +55,9 @@ export interface Props {
                     element.classList.toggle("excluded", !input.checked);
                 }
             }
+
+            updateComputed(render!, values);
+            updateNumbering(render!);
         }
         renderDocument();
 
@@ -124,6 +127,12 @@ export interface Props {
 
     .prose [data-optional].excluded {
         opacity: 0.4;
+    }
+
+    /* Excluded entries drop out of the list numbering, matching the printed output */
+    .prose ol > li[data-optional].excluded {
+        counter-increment: list-item 0;
+        list-style: none;
     }
 
     @media print {

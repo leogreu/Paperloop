@@ -12,6 +12,13 @@ export class ContentEditable extends HTMLElement {
         return format && this.value ? applyFormat(this.value, format) : this.value;
     }
 
+    // Shown in gray while empty: the formatted fallback if present, the placeholder name otherwise
+    get hint() {
+        const fallback = this.getAttribute("fallback");
+        const format = this.getAttribute("format");
+        return fallback ? (format ? applyFormat(fallback, format) : fallback) : this.placeholder;
+    }
+
     get styles() {
         return `
             :host {
@@ -61,6 +68,17 @@ export class ContentEditable extends HTMLElement {
                 [contenteditable]:empty:before {
                     content: "";
                 }
+
+                /* Fallbacks are printed as normal text instead of a to-be-filled box */
+                :host([fallback]) [contenteditable]:empty {
+                    min-width: unset;
+                    background-color: unset;
+                }
+
+                :host([fallback]) [contenteditable]:empty:before {
+                    content: attr(placeholder);
+                    color: unset;
+                }
             }
         `;
     }
@@ -68,7 +86,7 @@ export class ContentEditable extends HTMLElement {
     render() {
         this.shadowRoot!.innerHTML = `
             <style>${this.styles}</style>
-            <div placeholder="${encodeHTML(this.placeholder)}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${encodeHTML(this.display)}</div>
+            <div placeholder="${encodeHTML(this.hint)}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${encodeHTML(this.display)}</div>
         `;
     }
 

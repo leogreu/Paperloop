@@ -13,10 +13,12 @@ const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
 // Optionally consumes the line break after a standalone marker so it attaches to the following paragraph or heading
 const optionals = /\[\?(\S+?)\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/g;
 
-// Shared trailing part with an optional display-only format suffix, closing bracket, and attribute block
-const suffix = String.raw`(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?`;
-const computed = new RegExp(String.raw`\[([^\s=\]]+)=([^\]]+?)${suffix}`, "g");
-const placeholders = new RegExp(String.raw`\[([^\s:\]]+)${suffix}`, "g");
+// Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
+// block; only known function names count as formats, so colons can occur in expressions and fallbacks
+const formats = "currency|format";
+const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
+const computed = new RegExp(String.raw`\[([^\s=?\]]+)=([^\]\r\n]+?)${suffix}`, "g");
+const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]+?))?${suffix}`, "g");
 
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
 
@@ -52,8 +54,13 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
         .replace(computed, (_, key, expression, format, attributes) =>
             renderEditable(attributes, { expression, placeholder: key, format }, "readonly"))
-        .replace(placeholders, (_, key, format, attributes) =>
-            renderEditable(attributes, { value: values[key] ?? String(), placeholder: key, format }, "underline"));
+        .replace(placeholders, (_, key, assign, fallback, format, attributes) =>
+            renderEditable(attributes, {
+                value: values[key] ?? (assign ? fallback : String()),
+                placeholder: key,
+                [assign ? "default" : "fallback"]: fallback,
+                format
+            }, "underline"));
 
     return md.render(replaced);
 };
@@ -61,6 +68,11 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
 const currency = (value: number, currency = "USD", locale = navigator.language) => new Intl.NumberFormat(locale, {
     style: "currency",
     currency
+}).format(value);
+
+const formatNumber = (value: number, decimals?: number, locale = navigator.language) => new Intl.NumberFormat(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
 }).format(value);
 
 // Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
@@ -77,7 +89,8 @@ export const applyFormat = (value: unknown, expression: string) => {
 
     try {
         const result = evaluate(expression, {
-            currency: (code?: string, locale?: string) => currency(input, code, locale)
+            currency: (code?: string, locale?: string) => currency(input, code, locale),
+            format: (decimals?: number, locale?: string) => formatNumber(input, decimals, locale)
         });
         return String(typeof result === "function" ? result() : result);
     } catch {
@@ -92,6 +105,16 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
         if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
     }
 
+    // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered,
+    // unless they sit in an excluded optional block (requires the lift pass to have run before)
+    for (const element of root.querySelectorAll("content-editable[fallback], content-editable[default]")) {
+        const key = element.getAttribute("placeholder") ?? String();
+        const preset = element.getAttribute("default");
+        scope[key] ??= preset !== null && values[key] === undefined && !element.closest(".excluded")
+            ? toNumber(preset)
+            : 0;
+    }
+
     for (const element of root.querySelectorAll("content-editable[expression]")) {
         let value = String();
         try {
@@ -104,6 +127,54 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
 
         // Store the raw result (the display getter applies any :format suffix), and only when changed
         if (element.getAttribute("value") !== value) element.setAttribute("value", value);
+    }
+};
+
+// Finds the first non-empty text node, which numbering prefixes are read from and written to
+const firstText = (element: Element) => [...element.childNodes].find(
+    (node): node is Text => node.nodeType === Node.TEXT_NODE && Boolean(node.textContent?.trim())
+);
+
+const numbered = /^(\s*)(\d+(?:\.\d+)*)(\.?)\s/;
+
+// Renumbers headings and table rows with numeric prefixes; excluded blocks are skipped and lose
+// their number, so the visible numbering always matches the printed output. Only applies where
+// optional blocks are actually involved, leaving purely static numbering untouched
+export const updateNumbering = (root: ParentNode) => {
+    const counters: Record<number, number> = {};
+    if (root.querySelector(":is(h1, h2, h3, h4, h5, h6)[data-optional]")) {
+        for (const heading of root.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+            const text = firstText(heading);
+            const match = text?.textContent?.match(numbered);
+            if (!text || !match) continue;
+
+            const level = Number(heading.tagName[1]);
+            for (const key of Object.keys(counters)) if (Number(key) > level) delete counters[Number(key)];
+
+            if (heading.classList.contains("excluded")) {
+                text.textContent = text.textContent!.replace(numbered, match[1]);
+            } else {
+                counters[level] = (counters[level] ?? 0) + 1;
+                const components = Object.keys(counters).map(Number).sort((a, b) => a - b).map(key => counters[key]);
+                text.textContent = text.textContent!.replace(numbered, `${match[1]}${components.join(".")}${match[3]} `);
+            }
+        }
+    }
+
+    for (const body of root.querySelectorAll("tbody")) {
+        if (!body.querySelector("[data-optional]")) continue;
+
+        let count = 0;
+        for (const row of body.querySelectorAll("tr")) {
+            const cell = row.querySelector("td");
+            const text = cell && firstText(cell);
+            const match = text?.textContent?.match(/^(\s*)(\d+)(\.?)\s*$/);
+            if (!text || !match) continue;
+
+            text.textContent = row.classList.contains("excluded")
+                ? match[1]
+                : `${match[1]}${++count}${match[3]}`;
+        }
     }
 };
 
