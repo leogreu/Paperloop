@@ -127,6 +127,49 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
     }
 };
 
+// Finds the first non-empty text node, which numbering prefixes are read from and written to
+const firstText = (element: Element) => [...element.childNodes].find(
+    (node): node is Text => node.nodeType === Node.TEXT_NODE && Boolean(node.textContent?.trim())
+);
+
+const numbered = /^(\s*)(\d+(?:\.\d+)*)(\.?)\s/;
+
+// Renumbers headings and table rows with numeric prefixes; excluded blocks are skipped and lose
+// their number, so the visible numbering always matches the printed output
+export const updateNumbering = (root: ParentNode) => {
+    const counters: Record<number, number> = {};
+    for (const heading of root.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+        const level = Number(heading.tagName[1]);
+        for (const key of Object.keys(counters)) if (Number(key) > level) delete counters[Number(key)];
+
+        const text = firstText(heading);
+        const match = text?.textContent?.match(numbered);
+        if (!text || !match) continue;
+
+        if (heading.classList.contains("excluded")) {
+            text.textContent = text.textContent!.replace(numbered, match[1]);
+        } else {
+            counters[level] = (counters[level] ?? 0) + 1;
+            const components = Object.keys(counters).map(Number).sort((a, b) => a - b).map(key => counters[key]);
+            text.textContent = text.textContent!.replace(numbered, `${match[1]}${components.join(".")}${match[3]} `);
+        }
+    }
+
+    for (const body of root.querySelectorAll("tbody")) {
+        let count = 0;
+        for (const row of body.querySelectorAll("tr")) {
+            const cell = row.querySelector("td");
+            const text = cell && firstText(cell);
+            const match = text?.textContent?.match(/^(\s*)(\d+)(\.?)\s*$/);
+            if (!text || !match) continue;
+
+            text.textContent = row.classList.contains("excluded")
+                ? match[1]
+                : `${match[1]}${++count}${match[3]}`;
+        }
+    }
+};
+
 export const parseFrontmatter = (value: string) => {
     const [_, match] = value.match(frontmatter) ?? [];
     return match && parse(match);

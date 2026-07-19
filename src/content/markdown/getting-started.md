@@ -150,6 +150,8 @@ Blocks with the same name are toggled together — just like placeholders sharin
 
 For paragraphs spanning multiple lines, you can also place the marker on its own line directly above the text. And if you place it in front of a heading (or inside it, like `## [?name] Title`), the entire section is toggled — from the heading up to the next heading of the same or a higher level.
 
+Numbered headings (like `## 3. Title`), table rows whose first cell is a number, and numbered lists are renumbered automatically as optional blocks are toggled — excluded entries lose their number until they are included.
+
 ## 12. Calculations
 
 You can calculate values from other placeholders by writing an expression after a `=` sign. Results update live as you fill in the referenced placeholders.
