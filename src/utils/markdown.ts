@@ -13,10 +13,12 @@ const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
 // Optionally consumes the line break after a standalone marker so it attaches to the following paragraph or heading
 const optionals = /\[\?(\S+?)\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/g;
 
-// Shared trailing part with an optional display-only format suffix, closing bracket, and attribute block
-const suffix = String.raw`(?::(\w+\([^\]]*\)|\w+))?\](?!\()(?:\{([^}]*)\})?`;
-const computed = new RegExp(String.raw`\[([^\s=\]]+)=([^\]]+?)${suffix}`, "g");
-const placeholders = new RegExp(String.raw`\[([^\s:\]]+)${suffix}`, "g");
+// Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
+// block; only known function names count as formats, so colons can occur in expressions and fallbacks
+const formats = "currency|format";
+const suffix = String.raw`(?::((?:${formats})\([^\]]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
+const computed = new RegExp(String.raw`\[([^\s=?\]]+)=([^\]]+?)${suffix}`, "g");
+const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]]+?))?${suffix}`, "g");
 
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
 
@@ -52,8 +54,13 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
         .replace(computed, (_, key, expression, format, attributes) =>
             renderEditable(attributes, { expression, placeholder: key, format }, "readonly"))
-        .replace(placeholders, (_, key, format, attributes) =>
-            renderEditable(attributes, { value: values[key] ?? String(), placeholder: key, format }, "underline"));
+        .replace(placeholders, (_, key, assign, fallback, format, attributes) =>
+            renderEditable(attributes, {
+                value: values[key] ?? (assign ? fallback : String()),
+                placeholder: key,
+                [assign ? "default" : "fallback"]: fallback,
+                format
+            }, "underline"));
 
     return md.render(replaced);
 };
@@ -90,6 +97,13 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
     const scope: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(values)) {
         if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+    }
+
+    // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered
+    for (const element of root.querySelectorAll("content-editable[fallback], content-editable[default]")) {
+        const key = element.getAttribute("placeholder") ?? String();
+        const preset = element.getAttribute("default");
+        scope[key] ??= preset !== null && values[key] === undefined ? toNumber(preset) : 0;
     }
 
     for (const element of root.querySelectorAll("content-editable[expression]")) {
