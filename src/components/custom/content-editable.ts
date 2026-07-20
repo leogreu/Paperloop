@@ -22,18 +22,23 @@ export class ContentEditable extends HTMLElement {
     get styles() {
         return `
             :host {
-                display: inline-block;
-                min-width: 0.5rem;
-                min-height: 0.5rem;
+                display: inline;
             }
 
             [contenteditable] {
+                display: inline;
                 outline: none;
                 cursor: text;
-                min-height: inherit;
 
                 /* Keeps line breaks and leading or trailing spaces intact */
                 white-space: break-spaces;
+            }
+
+            /* Only an empty field forms a box; a filled one wraps along with the surrounding text */
+            [contenteditable]:empty {
+                display: inline-block;
+                min-width: 0.5rem;
+                min-height: 0.5rem;
             }
 
             [contenteditable]:empty:before {
@@ -98,10 +103,11 @@ export class ContentEditable extends HTMLElement {
     }
 
     render() {
-        this.shadowRoot!.innerHTML = `
-            <style>${this.styles}</style>
-            <div placeholder="${encodeHTML(this.hint)}" contenteditable="${this.hasAttribute("readonly") ? "false" : "plaintext-only"}">${encodeHTML(this.display)}</div>
-        `;
+        const editable = this.hasAttribute("readonly") ? "false" : "plaintext-only";
+
+        // Must not contain whitespace between the elements, which would show as a space in the text
+        this.shadowRoot!.innerHTML = `<style>${this.styles}</style>`
+            + `<div placeholder="${encodeHTML(this.hint)}" contenteditable="${editable}">${encodeHTML(this.display)}</div>`;
     }
 
     get content() {
