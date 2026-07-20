@@ -45,6 +45,11 @@ export class ContentEditable extends HTMLElement {
                 text-decoration: underline;
             }
 
+            /* A fallback is printed as it is, so it is underlined like an entered value */
+            :host([fallback]) [contenteditable]:empty {
+                text-decoration: underline hsl(var(--placeholder));
+            }
+
             :host([readonly]) [contenteditable] {
                 cursor: default;
             }
@@ -61,7 +66,8 @@ export class ContentEditable extends HTMLElement {
             }
 
             @media print {
-                :host([underline]) [contenteditable]:not(:empty) {
+                :host([underline]) [contenteditable]:not(:empty),
+                :host([fallback]) [contenteditable]:empty {
                     text-decoration: none;
                 }
 
