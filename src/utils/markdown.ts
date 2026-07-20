@@ -16,7 +16,7 @@ const optionals = /\[\?([^\s=?\]]+)(?:(\?\?)?=([^\]\r\n]+?))?\][ \t]*(?:\r?\n(#{
 
 // Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
-const formats = "currency|format|date";
+const formats = "currency|number|date";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
 // The name may be omitted when the result is only rendered and not referenced elsewhere
 const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
@@ -101,7 +101,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
 // namespaced under `formatting` to not collide with frontmatter of other markdown-based tools
 let formatting: { currency?: string, decimals?: number, locale?: string } = {};
 
-const currency = (value: number, currency = formatting.currency ?? "USD", locale = formatting.locale ?? navigator.language) => new Intl.NumberFormat(locale, {
+const formatCurrency = (value: number, currency = formatting.currency ?? "USD", locale = formatting.locale ?? navigator.language) => new Intl.NumberFormat(locale, {
     style: "currency",
     currency
 }).format(value);
@@ -124,7 +124,7 @@ const toNumber = (value: string) => {
     return normalized && !isNaN(numeric) ? numeric : value;
 };
 
-// Applies a :format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
+// Applies a format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
 export const applyFormat = (value: unknown, expression: string) => {
     const input = typeof value === "string" ? toNumber(value) : value;
 
@@ -132,8 +132,8 @@ export const applyFormat = (value: unknown, expression: string) => {
         // Every format leaves a value it cannot read as it is, rather than rendering an error
         const result = evaluate(expression, {
             currency: (code?: string, locale?: string) =>
-                typeof input === "number" ? currency(input, code, locale) : value,
-            format: (decimals?: number, locale?: string) =>
+                typeof input === "number" ? formatCurrency(input, code, locale) : value,
+            number: (decimals?: number, locale?: string) =>
                 typeof input === "number" ? formatNumber(input, decimals, locale) : value,
             date: (style?: Intl.DateTimeFormatOptions["dateStyle"], locale?: string) =>
                 isNaN(Date.parse(String(value))) ? value : formatDate(String(value), style, locale)
@@ -204,7 +204,7 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
             // Unresolvable (e.g., empty inputs): drop the value, so the name is shown instead
         }
 
-        // Store the raw result (the display getter applies any :format suffix), and only when
+        // Store the raw result (the display getter applies any format suffix), and only when
         // changed; an expression resolving to an empty string keeps the attribute and renders nothing
         if (element.getAttribute("value") === value) continue;
         if (value === null) element.removeAttribute("value");

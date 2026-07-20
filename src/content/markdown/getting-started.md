@@ -166,15 +166,21 @@ You can calculate values from other placeholders by writing an expression after 
 
 **Example:** The net price is [Net:currency], so the gross price is [Gross=Net*1.19:currency].
 
-Append `:currency` to a placeholder or calculation to display it as a currency amount — the raw number stays available for further calculations, and inputs switch back to the raw value while you edit them. Two optional arguments set the currency and the language, e.g. `:currency("EUR", "de")` — by default, USD and your browser language are used.
+Append a format option to a placeholder or calculation to display its value nicely. The raw value stays available for further calculations, and inputs switch back to it while you edit them. Each option takes optional arguments, the last of which is always the language.
 
-Similarly, append `:format` to display a plain formatted number, with optional arguments for the number of decimal places and the language, e.g. `:format(2, "de")`.
+**Available format options:**
 
-The function `date()` yields today's date, written as `2026-07-20` so it stays sortable and can be used in calculations. Append `:date` to display it for the reader instead, with optional arguments for the style (`short`, `medium`, `long` or `full`) and the language, e.g. `:date("long")`.
+- `:currency`: a currency amount, with the currency and the language, e.g. `:currency("EUR", "de")`
+- `:number`: a plain number, with the decimal places and the language, e.g. `:number(2, "de")`
+- `:date`: a date, with the style (`short`, `medium`, `long` or `full`) and the language, e.g. `:date("long")`
+
+**Available functions:**
+
+- `date()`: today's date, written as `2026-07-20` so that it stays sortable and can be used in calculations
 
 **Example:** Today is [=date():date].
 
-To avoid repeating these settings, a document can state them once in its frontmatter, after which a plain `:currency` or `:format` is enough. Arguments written at a suffix still take precedence, and each setting may be left out on its own:
+To avoid repeating these settings, a document can state them once in its frontmatter, so that a plain `:currency`, `:number` or `:date` is enough. Arguments written at an option still take precedence, and each setting may be left out on its own:
 
 ```
 ---
@@ -228,7 +234,7 @@ bottom-left: "[Reference??Draft]"
 ---
 ```
 
-Headers and footers may contain placeholders, which are filled in with the same values as the document itself, including their fallbacks and a `:currency` or `:format` suffix. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
+Headers and footers may contain placeholders, which are filled in with the same values as the document itself, including their fallbacks and format options. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
 
 Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
 
