@@ -18,7 +18,7 @@ const optionals = /\[\?([^\s=?\]]+)(?:(\?\?)?=([^\]\r\n]+?))?\][ \t]*(?:\r?\n(#{
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
 const formats = "currency|format";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
-// The name may be omitted entirely (or be a throwaway like _) to just render an expression
+// The name may be omitted when the result is only rendered and not referenced elsewhere
 const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
 const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]+?))?${suffix}`, "g");
 
