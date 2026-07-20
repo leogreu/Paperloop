@@ -111,17 +111,26 @@ const formatNumber = (value: number, decimals = formatting.decimals ?? 2, locale
     maximumFractionDigits: decimals
 }).format(value);
 
-// Swedish formatting is ISO-like, which yields the local date rather than the UTC one of toISOString
-const today = () => new Date().toLocaleDateString("sv");
-
 const formatDate = (value: string, style: Intl.DateTimeFormatOptions["dateStyle"] = "medium",
-    locale = formatting.locale ?? navigator.language) => new Date(value).toLocaleDateString(locale, { dateStyle: style });
+    locale = formatting.locale ?? navigator.language) =>
+    // A date-only value is parsed as UTC midnight, so anchor it to local time to avoid an off-by-one
+    new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00` : value).toLocaleDateString(locale, { dateStyle: style });
 
 // Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
 const toNumber = (value: string) => {
     const normalized = value.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
     const numeric = Number(normalized);
     return normalized && !isNaN(numeric) ? numeric : value;
+};
+
+// The base scope shared by calculations: the document values as numbers, plus the date() function.
+// Swedish formatting is ISO-like, which yields the local date rather than the UTC one of toISOString
+const valueScope = (values: Record<string, string>) => {
+    const scope: Record<string, unknown> = { date: () => new Date().toLocaleDateString("sv") };
+    for (const [key, value] of Object.entries(values)) {
+        if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+    }
+    return scope;
 };
 
 // Applies a format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
@@ -136,7 +145,7 @@ export const applyFormat = (value: unknown, expression: string) => {
             number: (decimals?: number, locale?: string) =>
                 typeof input === "number" ? formatNumber(input, decimals, locale) : value,
             date: (style?: Intl.DateTimeFormatOptions["dateStyle"], locale?: string) =>
-                isNaN(Date.parse(String(value))) ? value : formatDate(String(value), style, locale)
+                typeof input === "number" || isNaN(Date.parse(String(value))) ? value : formatDate(String(value), style, locale)
         });
         return String(typeof result === "function" ? result() : result);
     } catch {
@@ -173,15 +182,12 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
 
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
-    const scope: Record<string, unknown> = { date: today };
+    const scope = valueScope(values);
 
-    // Optional toggles are in scope as booleans (requires updateOptional to have run before)
+    // Optional toggles are in scope as booleans (requires updateOptional to have run before), while
+    // placeholders of the same name take precedence, as they are already in the scope
     for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
-        scope[input.dataset.optional ?? String()] = input.checked;
-    }
-
-    for (const [key, value] of Object.entries(values)) {
-        if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+        scope[input.dataset.optional ?? String()] ??= input.checked;
     }
 
     // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered,
@@ -262,14 +268,11 @@ export const updateNumbering = (root: ParentNode) => {
 
 const boxes = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"];
 
-// Header and footer are rendered by the @page margin boxes from attributes on <html>, which are set
-// server-side from the raw frontmatter; their placeholders are resolved here, right before printing
+// Header and footer are rendered by the @page margin boxes, which read attributes off <html>; their
+// placeholders are resolved here and set on the root element right before printing
 export const updateMargins = (value: string, values: Record<string, string>) => {
     const margins = parseFrontmatter(value)?.margins ?? {};
-    const scope: Record<string, unknown> = { date: today };
-    for (const [key, text] of Object.entries(values)) {
-        if (text.trim() && !key.startsWith("?")) scope[key] = toNumber(text);
-    }
+    const scope = valueScope(values);
 
     for (const key of boxes) {
         const text = margins[key];
@@ -295,7 +298,7 @@ export const updateMargins = (value: string, values: Record<string, string>) => 
     }
 };
 
-export const parseFrontmatter = (value: string) => {
+const parseFrontmatter = (value: string) => {
     const [_, match] = value.match(frontmatter) ?? [];
     try {
         return match && parse(match);
