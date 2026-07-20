@@ -20,7 +20,8 @@ const formats = "currency|format";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
 // The name may be omitted when the result is only rendered and not referenced elsewhere
 const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
-const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]+?))?${suffix}`, "g");
+// An empty fallback ([Name??]) marks an optional field, which prints nothing while it is empty
+const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]*?))?${suffix}`, "g");
 
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
 
@@ -80,7 +81,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             if (expression) return renderEditable(attributes, { expression, placeholder: key, format }, "readonly");
 
             // A fallback applies to every occurrence of its placeholder, defined at the first one
-            if (fallback) fallbacks[key] = [assign, fallback];
+            if (fallback !== undefined) fallbacks[key] = [assign, fallback];
             else [assign, fallback] = fallbacks[key] ?? [assign, fallback];
 
             return renderEditable(attributes, {

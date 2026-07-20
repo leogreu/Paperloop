@@ -55,6 +55,12 @@ export class ContentEditable extends HTMLElement {
                 text-decoration: underline hsl(var(--placeholder));
             }
 
+            /* An empty one prints nothing, so it is only marked as optional, not as an entry */
+            :host([fallback=""]) [contenteditable]:empty {
+                font-style: italic;
+                text-decoration: none;
+            }
+
             :host([readonly]) [contenteditable] {
                 cursor: default;
             }
@@ -97,6 +103,11 @@ export class ContentEditable extends HTMLElement {
                 :host([fallback]) [contenteditable]:empty:before {
                     content: attr(placeholder);
                     color: unset;
+                }
+
+                /* An empty fallback prints nothing at all, not even the placeholder name */
+                :host([fallback=""]) [contenteditable]:empty:before {
+                    content: "";
                 }
             }
         `;
