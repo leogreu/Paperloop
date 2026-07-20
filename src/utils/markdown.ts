@@ -18,7 +18,8 @@ const optionals = /\[\?([^\s=?\]]+)(?:(\?\?)?=([^\]\r\n]+?))?\][ \t]*(?:\r?\n(#{
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
 const formats = "currency|format";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
-const computed = new RegExp(String.raw`\[([^\s=?\]]+)=([^\]\r\n]+?)${suffix}`, "g");
+// The name may be omitted entirely (or be a throwaway like _) to just render an expression
+const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
 const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]+?))?${suffix}`, "g");
 
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
@@ -164,17 +165,20 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
     }
 
     for (const element of root.querySelectorAll("content-editable[expression]")) {
-        let value = String();
+        let value: string | null = null;
         try {
             const result = evaluate(element.getAttribute("expression") ?? String(), scope);
             scope[element.getAttribute("placeholder") ?? String()] = result;
             value = typeof result === "number" ? format(result, { precision: 14 }) : String(result);
         } catch {
-            // Unresolvable (e.g., empty inputs): keep empty so the name is shown instead
+            // Unresolvable (e.g., empty inputs): drop the value, so the name is shown instead
         }
 
-        // Store the raw result (the display getter applies any :format suffix), and only when changed
-        if (element.getAttribute("value") !== value) element.setAttribute("value", value);
+        // Store the raw result (the display getter applies any :format suffix), and only when
+        // changed; an expression resolving to an empty string keeps the attribute and renders nothing
+        if (element.getAttribute("value") === value) continue;
+        if (value === null) element.removeAttribute("value");
+        else element.setAttribute("value", value);
     }
 };
 

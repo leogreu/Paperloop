@@ -172,6 +172,12 @@ For optional placeholders, append `??` with a fallback value that is shown and p
 
 **Example:** Optional placeholder: [Variable??1200:currency].
 
+Expressions can also result in text rather than a number. Wrap it in straight quotes (single or double), which may contain spaces and colons, and use a condition to decide between two of them. This way, a label can be shown only while a placeholder is still empty, and disappear as soon as it is filled in — on screen as well as in print.
+
+**Example:** [Intro=Amount ? "" : "Optional: "][Amount??500:currency]
+
+If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
+
 ## 13. Alignment {#alignment}
 
 Paperloop also allows you to align text using [Tailwind CSS](https://tailwindcss.com/) classes. If you want a sentence or word to be right-aligned, simple add `{.text-right}` to the end.
