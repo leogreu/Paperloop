@@ -59,16 +59,13 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             const attributes = renderAttributes({
                 class: "optional-toggle not-prose",
                 "data-optional": key,
-                [assign ? "data-default" : "data-expression"]: expression
+                "data-expression": expression,
+                checked: values[`?${key}`] === "true" ? "checked" : undefined,
+                // A single = always follows the expression, while ??= only sets the initial state
+                disabled: expression && !assign ? "disabled" : undefined
             });
 
-            // Derived states are resolved by updateOptional; only explicit ones are stored
-            const flags = [
-                values[`?${key}`] === "true" && "checked",
-                expression && !assign && "disabled"
-            ].filter(Boolean);
-
-            return `${heading ?? String()}<input type="checkbox" ${[attributes, ...flags].join(" ")}> `;
+            return `${heading ?? String()}<input type="checkbox" ${attributes}> `;
         })
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
         .replace(computed, (_, key, expression, format, attributes) =>
@@ -127,19 +124,19 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
     const scope: Record<string, boolean> = {};
     const derived: HTMLInputElement[] = [];
 
-    // [?Name=Expression] always follows its expression, [?Name??=Expression] only until set explicitly;
+    // A = expression (which renders as disabled) always applies, a ??= one only until set explicitly;
     // all other states are known upfront, so expressions can reference them anywhere in the document
     for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
-        const key = input.dataset.optional ?? String();
-        if (input.dataset.expression || (input.dataset.default && values[`?${key}`] === undefined)) derived.push(input);
-        else scope[key] = input.checked;
+        const { optional = String(), expression } = input.dataset;
+        if (expression && (input.disabled || values[`?${optional}`] === undefined)) derived.push(input);
+        else scope[optional] = input.checked;
     }
 
     // Resolved in document order, so expressions can reference earlier derived toggles
     for (const input of derived) {
         let state = false;
         try {
-            state = Boolean(evaluate(input.dataset.expression ?? input.dataset.default ?? String(), scope));
+            state = Boolean(evaluate(input.dataset.expression ?? String(), scope));
         } catch {
             // Unresolvable (e.g., toggles defined further down): keep excluded
         }
