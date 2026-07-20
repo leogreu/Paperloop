@@ -170,6 +170,10 @@ Append `:currency` to a placeholder or calculation to display it as a currency a
 
 Similarly, append `:format` to display a plain formatted number, with optional arguments for the number of decimal places and the language, e.g. `:format(2, "de")`.
 
+The function `date()` yields today's date, written as `2026-07-20` so it stays sortable and can be used in calculations. Append `:date` to display it for the reader instead, with optional arguments for the style (`short`, `medium`, `long` or `full`) and the language, e.g. `:date("long")`.
+
+**Example:** Today is [=date():date].
+
 To avoid repeating these settings, a document can state them once in its frontmatter, after which a plain `:currency` or `:format` is enough. Arguments written at a suffix still take precedence, and each setting may be left out on its own:
 
 ```

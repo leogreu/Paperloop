@@ -16,7 +16,7 @@ const optionals = /\[\?([^\s=?\]]+)(?:(\?\?)?=([^\]\r\n]+?))?\][ \t]*(?:\r?\n(#{
 
 // Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
-const formats = "currency|format";
+const formats = "currency|format|date";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
 // The name may be omitted when the result is only rendered and not referenced elsewhere
 const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
@@ -111,6 +111,12 @@ const formatNumber = (value: number, decimals = formatting.decimals ?? 2, locale
     maximumFractionDigits: decimals
 }).format(value);
 
+// Swedish formatting is ISO-like, which yields the local date rather than the UTC one of toISOString
+const today = () => new Date().toLocaleDateString("sv");
+
+const formatDate = (value: string, style: Intl.DateTimeFormatOptions["dateStyle"] = "medium",
+    locale = formatting.locale ?? navigator.language) => new Date(value).toLocaleDateString(locale, { dateStyle: style });
+
 // Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
 const toNumber = (value: string) => {
     const normalized = value.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
@@ -121,12 +127,16 @@ const toNumber = (value: string) => {
 // Applies a :format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
 export const applyFormat = (value: unknown, expression: string) => {
     const input = typeof value === "string" ? toNumber(value) : value;
-    if (typeof input !== "number") return String(value ?? String());
 
     try {
+        // Every format leaves a value it cannot read as it is, rather than rendering an error
         const result = evaluate(expression, {
-            currency: (code?: string, locale?: string) => currency(input, code, locale),
-            format: (decimals?: number, locale?: string) => formatNumber(input, decimals, locale)
+            currency: (code?: string, locale?: string) =>
+                typeof input === "number" ? currency(input, code, locale) : value,
+            format: (decimals?: number, locale?: string) =>
+                typeof input === "number" ? formatNumber(input, decimals, locale) : value,
+            date: (style?: Intl.DateTimeFormatOptions["dateStyle"], locale?: string) =>
+                isNaN(Date.parse(String(value))) ? value : formatDate(String(value), style, locale)
         });
         return String(typeof result === "function" ? result() : result);
     } catch {
@@ -163,7 +173,7 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
 
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
-    const scope: Record<string, unknown> = {};
+    const scope: Record<string, unknown> = { date: today };
 
     // Optional toggles are in scope as booleans (requires updateOptional to have run before)
     for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
@@ -256,13 +266,32 @@ const margins = ["top-left", "top-center", "top-right", "bottom-left", "bottom-c
 // server-side; their placeholders are therefore resolved here, on every render
 export const updateMargins = (value: string, values: Record<string, string>) => {
     const frontmatter = parseFrontmatter(value) ?? {};
+    const scope: Record<string, unknown> = { date: today };
+    for (const [key, text] of Object.entries(values)) {
+        if (text.trim() && !key.startsWith("?")) scope[key] = toNumber(text);
+    }
+
     for (const key of margins) {
         const text = frontmatter[key];
-        if (text === undefined) document.documentElement.removeAttribute(key);
-        else document.documentElement.setAttribute(key, String(text).replace(placeholders, (_, name, _assign, fallback, format) => {
-            const resolved = values[name] || fallback || String();
-            return format ? applyFormat(resolved, format) : resolved;
-        }));
+        if (text === undefined) {
+            document.documentElement.removeAttribute(key);
+            continue;
+        }
+
+        // Calculations are resolved first, as the placeholder pass would otherwise consume them
+        document.documentElement.setAttribute(key, String(text)
+            .replace(computed, (_, _name, expression, format) => {
+                try {
+                    const result = evaluate(expression, scope);
+                    return format ? applyFormat(result, format) : String(result);
+                } catch {
+                    return String();
+                }
+            })
+            .replace(placeholders, (_, name, _assign, fallback, format) => {
+                const resolved = values[name] || fallback || String();
+                return format ? applyFormat(resolved, format) : resolved;
+            }));
     }
 };
 
