@@ -148,6 +148,14 @@ Sometimes a paragraph, bullet point, or table row only applies to some documents
 
 Blocks with the same name are toggled together — just like placeholders sharing a value. Your choices are saved per document.
 
+A block can also derive its state from an expression, following the same syntax as placeholders. With `??=` the expression only sets the initial state, so you can still toggle the block yourself. With a single `=` the block always follows its expression, and its checkbox is disabled.
+
+[?extended??=true] This block starts out included, but can still be turned off.
+
+[?basic=not extended] And this one is shown automatically whenever the block above is not.
+
+Expressions result in true or false and may reference other blocks by name, e.g. `not other`, `first and not second`, or `other ? false : true`. Please note that `!` is not supported, as it means factorial. A referenced block can be placed anywhere in the document, unless its own state is derived as well — in that case, it needs to be defined earlier. Like fallbacks, the expression is defined at the first occurrence of a name and then applies to all of them.
+
 For paragraphs spanning multiple lines, you can also place the marker on its own line directly above the text. And if you place it in front of a heading (or inside it, like `## [?name] Title`), the entire section is toggled — from the heading up to the next heading of the same or a higher level.
 
 Numbered headings (like `## 3. Title`), table rows whose first cell is a number, and numbered lists are renumbered automatically as optional blocks are toggled — excluded entries lose their number until they are included.
@@ -163,6 +171,12 @@ Append `:currency` to a placeholder or calculation to display it as a currency a
 For optional placeholders, append `??` with a fallback value that is shown and printed while the placeholder is empty — but counts as zero in calculations until you actually fill in the field. With `??=` the value is considered in calculations right away instead. Define the fallback at the first occurrence of a placeholder — it then applies to all of them.
 
 **Example:** Optional placeholder: [Variable??1200:currency].
+
+Expressions can also result in text rather than a number. Wrap it in straight quotes (single or double), which may contain spaces and colons, and use a condition to decide between two of them. This way, a label can be shown only while a placeholder is still empty, and disappear as soon as it is filled in — on screen as well as in print.
+
+**Example:** [Intro=Amount ? "" : "Optional: "][Amount??500:currency]
+
+If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
 
 ## 13. Alignment {#alignment}
 

@@ -31,6 +31,9 @@ export class ContentEditable extends HTMLElement {
                 outline: none;
                 cursor: text;
                 min-height: inherit;
+
+                /* Keeps line breaks and leading or trailing spaces intact */
+                white-space: break-spaces;
             }
 
             [contenteditable]:empty:before {
@@ -42,8 +45,18 @@ export class ContentEditable extends HTMLElement {
                 text-decoration: underline;
             }
 
+            /* A fallback is printed as it is, so it is underlined like an entered value */
+            :host([fallback]) [contenteditable]:empty {
+                text-decoration: underline hsl(var(--placeholder));
+            }
+
             :host([readonly]) [contenteditable] {
                 cursor: default;
+            }
+
+            /* An expression resolving to an empty string is no field to be filled, but simply gone */
+            :host([expression][value=""]) {
+                display: none;
             }
 
             span {
@@ -53,7 +66,8 @@ export class ContentEditable extends HTMLElement {
             }
 
             @media print {
-                :host([underline]) [contenteditable]:not(:empty) {
+                :host([underline]) [contenteditable]:not(:empty),
+                :host([fallback]) [contenteditable]:empty {
                     text-decoration: none;
                 }
 
@@ -119,8 +133,8 @@ export class ContentEditable extends HTMLElement {
         });
     }
 
-    attributeChangedCallback(name: string, _: string, value: string) {
-        Reflect.set(this, name, value);
+    attributeChangedCallback(name: string, _: string, value: string | null) {
+        Reflect.set(this, name, value ?? String());
         this.render();
         this.highlightTag();
     }

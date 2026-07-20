@@ -10,14 +10,16 @@ const md = markdownit({
 
 const frontmatter = /^---\s*\n([\s\S]*?)\n---/;
 
+// Mirrors the placeholder syntax: = always follows the expression, ??= only sets the initial state.
 // Optionally consumes the line break after a standalone marker so it attaches to the following paragraph or heading
-const optionals = /\[\?(\S+?)\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/g;
+const optionals = /\[\?([^\s=?\]]+)(?:(\?\?)?=([^\]\r\n]+?))?\][ \t]*(?:\r?\n(#{1,6}[ \t]+)|\r?\n(?=[ \t]*\S))?/g;
 
 // Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
 const formats = "currency|format";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
-const computed = new RegExp(String.raw`\[([^\s=?\]]+)=([^\]\r\n]+?)${suffix}`, "g");
+// The name may be omitted when the result is only rendered and not referenced elsewhere
+const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
 const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]+?))?${suffix}`, "g");
 
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
@@ -32,25 +34,39 @@ const parseClasses = (attributes?: string) => (attributes ?? String())
     .filter(Boolean)
     .join(" ");
 
-// Emits a <content-editable> element with the given attributes, skipping undefined ones
+// Serializes attributes, skipping undefined ones
+const renderAttributes = (properties: Record<string, string | undefined>) => Object.entries(properties)
+    .flatMap(([key, value]) => value !== undefined ? `${key}="${encodeAttribute(value)}"` : [])
+    .join(" ");
+
+// Emits a <content-editable> element with the given attributes
 const renderEditable = (attributes: string | undefined, properties: Record<string, string | undefined>, flags: string) => {
     const classes = ["not-prose", parseClasses(attributes)].filter(Boolean).join(" ");
-    const entries = Object.entries({ class: classes, ...properties })
-        .flatMap(([key, value]) => value !== undefined ? `${key}="${encodeAttribute(value)}"` : [])
-        .join(" ");
-
-    return `<content-editable ${entries} ${flags}></content-editable>`;
+    return `<content-editable ${renderAttributes({ class: classes, ...properties })} ${flags}></content-editable>`;
 };
 
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     // TODO: Evaluate whether to create markdown-it plugin
     const fallbacks: Record<string, [string, string]> = {};
+    const expressions: Record<string, [string, string]> = {};
     const replaced = value
         .replace(frontmatter, String())
         // Must run before the placeholder pass, which would otherwise consume [?name] tokens
-        .replace(optionals, (_, key, heading) => {
-            const checked = values[`?${key}`] ? " checked" : String();
-            return `${heading ?? String()}<input type="checkbox" class="optional-toggle not-prose" data-optional="${encodeAttribute(key)}"${checked}> `;
+        .replace(optionals, (_, key, assign, expression, heading) => {
+            // An expression applies to every occurrence of its toggle, defined at the first one
+            if (expression) expressions[key] = [assign, expression];
+            else [assign, expression] = expressions[key] ?? [assign, expression];
+
+            const attributes = renderAttributes({
+                class: "optional-toggle not-prose",
+                "data-optional": key,
+                "data-expression": expression,
+                checked: values[`?${key}`] === "true" ? "checked" : undefined,
+                // A single = always follows the expression, while ??= only sets the initial state
+                disabled: expression && !assign ? "disabled" : undefined
+            });
+
+            return `${heading ?? String()}<input type="checkbox" ${attributes}> `;
         })
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
         .replace(computed, (_, key, expression, format, attributes) =>
@@ -104,6 +120,33 @@ export const applyFormat = (value: unknown, expression: string) => {
     }
 };
 
+// Resolves derived optional toggles, whose expressions evaluate to a boolean (e.g. "not other")
+export const updateOptional = (root: ParentNode, values: Record<string, string>) => {
+    const scope: Record<string, boolean> = {};
+    const derived: HTMLInputElement[] = [];
+
+    // A = expression (which renders as disabled) always applies, a ??= one only until set explicitly;
+    // all other states are known upfront, so expressions can reference them anywhere in the document
+    for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
+        const { optional = String(), expression } = input.dataset;
+        if (expression && (input.disabled || values[`?${optional}`] === undefined)) derived.push(input);
+        else scope[optional] = input.checked;
+    }
+
+    // Resolved in document order, so expressions can reference earlier derived toggles
+    for (const input of derived) {
+        let state = false;
+        try {
+            state = Boolean(evaluate(input.dataset.expression ?? String(), scope));
+        } catch {
+            // Unresolvable (e.g., toggles defined further down): keep excluded
+        }
+
+        input.checked = state;
+        scope[input.dataset.optional ?? String()] = state;
+    }
+};
+
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
     const scope: Record<string, unknown> = {};
@@ -122,17 +165,20 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
     }
 
     for (const element of root.querySelectorAll("content-editable[expression]")) {
-        let value = String();
+        let value: string | null = null;
         try {
             const result = evaluate(element.getAttribute("expression") ?? String(), scope);
             scope[element.getAttribute("placeholder") ?? String()] = result;
             value = typeof result === "number" ? format(result, { precision: 14 }) : String(result);
         } catch {
-            // Unresolvable (e.g., empty inputs): keep empty so the name is shown instead
+            // Unresolvable (e.g., empty inputs): drop the value, so the name is shown instead
         }
 
-        // Store the raw result (the display getter applies any :format suffix), and only when changed
-        if (element.getAttribute("value") !== value) element.setAttribute("value", value);
+        // Store the raw result (the display getter applies any :format suffix), and only when
+        // changed; an expression resolving to an empty string keeps the attribute and renders nothing
+        if (element.getAttribute("value") === value) continue;
+        if (value === null) element.removeAttribute("value");
+        else element.setAttribute("value", value);
     }
 };
 

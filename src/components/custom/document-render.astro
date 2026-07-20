@@ -14,7 +14,7 @@ export interface Props {
 
 <script>
     import { getParticles } from "@/utils/particles";
-    import { markdownToHTML, updateComputed, updateNumbering, updateRender } from "@/utils/markdown";
+    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateRender } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
 
@@ -34,8 +34,10 @@ export interface Props {
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);
 
-            // Lift optional-toggle state to the containing block (paragraph, bullet, or table row);
-            // must run first, as updateComputed and updateNumbering read the resulting classes
+            // Resolve derived toggles, then lift their state to the containing block (paragraph,
+            // bullet, or table row); must run before updateComputed and updateNumbering, which
+            // read the resulting classes
+            updateOptional(render!, values);
             for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
                 const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
                 if (!block || block.hasAttribute("data-optional")) continue;
@@ -91,7 +93,9 @@ export interface Props {
         render.addEventListener("change", ({ target }) => {
             if (target instanceof HTMLInputElement && target.classList.contains("optional-toggle")) {
                 const key = `?${target.dataset.optional}`;
+                // Unchecking a ??= toggle is stored explicitly, so its expression does not apply again
                 if (target.checked) values[key] = "true";
+                else if (target.dataset.expression) values[key] = "false";
                 else delete values[key];
                 if (doc) localStorage.setItem(doc, JSON.stringify(values));
                 renderDocument();
@@ -123,6 +127,10 @@ export interface Props {
     .prose .optional-toggle {
         cursor: pointer;
         accent-color: hsl(var(--muted-foreground));
+    }
+
+    .prose .optional-toggle:disabled {
+        cursor: default;
     }
 
     .prose [data-optional].excluded {
