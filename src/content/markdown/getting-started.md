@@ -176,7 +176,7 @@ Expressions can also result in text rather than a number. Wrap it in straight qu
 
 **Example:** [Intro=Amount ? "" : "Optional: "][Amount??500:currency]
 
-If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
+If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. A condition can also reference an optional block by its name, which is true while the block is included. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
 
 ## 13. Alignment {#alignment}
 

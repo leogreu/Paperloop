@@ -150,6 +150,12 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
     const scope: Record<string, unknown> = {};
+
+    // Optional toggles are in scope as booleans (requires updateOptional to have run before)
+    for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
+        scope[input.dataset.optional ?? String()] = input.checked;
+    }
+
     for (const [key, value] of Object.entries(values)) {
         if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
     }
