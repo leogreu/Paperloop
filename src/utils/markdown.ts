@@ -49,6 +49,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
     // TODO: Evaluate whether to create markdown-it plugin
     const fallbacks: Record<string, [string, string]> = {};
     const expressions: Record<string, [string, string]> = {};
+    const calculations: Record<string, string> = {};
     const replaced = value
         .replace(frontmatter, String())
         // Must run before the placeholder pass, which would otherwise consume [?name] tokens
@@ -69,9 +70,15 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             return `${heading ?? String()}<input type="checkbox" ${attributes}> `;
         })
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
-        .replace(computed, (_, key, expression, format, attributes) =>
-            renderEditable(attributes, { expression, placeholder: key, format }, "readonly"))
+        .replace(computed, (_, key, expression, format, attributes) => {
+            if (key) calculations[key] = expression;
+            return renderEditable(attributes, { expression, placeholder: key, format }, "readonly");
+        })
         .replace(placeholders, (_, key, assign, fallback, format, attributes) => {
+            // A calculated name shows its result at every occurrence, and stays read-only there
+            const expression = calculations[key];
+            if (expression) return renderEditable(attributes, { expression, placeholder: key, format }, "readonly");
+
             // A fallback applies to every occurrence of its placeholder, defined at the first one
             if (fallback) fallbacks[key] = [assign, fallback];
             else [assign, fallback] = fallbacks[key] ?? [assign, fallback];
