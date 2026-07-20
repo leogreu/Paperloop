@@ -47,6 +47,8 @@ const renderEditable = (attributes: string | undefined, properties: Record<strin
 };
 
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
+    formatting = parseFrontmatter(value)?.formatting ?? {};
+
     // TODO: Evaluate whether to create markdown-it plugin
     const fallbacks: Record<string, [string, string]> = {};
     const expressions: Record<string, [string, string]> = {};
@@ -95,12 +97,16 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
     return md.render(replaced);
 };
 
-const currency = (value: number, currency = "USD", locale = navigator.language) => new Intl.NumberFormat(locale, {
+// Defaults for the format suffixes, so a document states its currency and language only once;
+// namespaced under `formatting` to not collide with frontmatter of other markdown-based tools
+let formatting: { currency?: string, decimals?: number, locale?: string } = {};
+
+const currency = (value: number, currency = formatting.currency ?? "USD", locale = formatting.locale ?? navigator.language) => new Intl.NumberFormat(locale, {
     style: "currency",
     currency
 }).format(value);
 
-const formatNumber = (value: number, decimals?: number, locale = navigator.language) => new Intl.NumberFormat(locale, {
+const formatNumber = (value: number, decimals = formatting.decimals ?? 2, locale = formatting.locale ?? navigator.language) => new Intl.NumberFormat(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
 }).format(value);
