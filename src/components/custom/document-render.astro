@@ -40,7 +40,7 @@ export interface Props {
             updateOptional(render!, values);
             for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
                 const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
-                if (!block || block.hasAttribute("data-optional")) continue;
+                if (!block) continue;
 
                 // A marker in a heading toggles the whole section, up to the next same- or higher-level heading
                 const section = [block];
@@ -52,9 +52,11 @@ export interface Props {
                     }
                 }
 
+                // Blocks start out included after the render above, so a block is excluded as soon
+                // as any toggle governing it is off — an inner one still applies within a section
                 for (const element of section) {
                     element.setAttribute("data-optional", input.dataset.optional ?? String());
-                    element.classList.toggle("excluded", !input.checked);
+                    if (!input.checked) element.classList.add("excluded");
                 }
             }
 
