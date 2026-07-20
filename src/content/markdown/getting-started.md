@@ -229,8 +229,9 @@ You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-gi
 
 ```
 ---
-top-center: Offer for [Company]
-bottom-left: "[Reference??Draft]"
+margins:
+  top-center: Offer for [Company]
+  bottom-left: "[Reference??Draft]"
 ---
 ```
 

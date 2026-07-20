@@ -260,19 +260,19 @@ export const updateNumbering = (root: ParentNode) => {
     }
 };
 
-const margins = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"];
+const boxes = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"];
 
 // Header and footer are rendered by the @page margin boxes from attributes on <html>, which are set
-// server-side; their placeholders are therefore resolved here, on every render
+// server-side from the raw frontmatter; their placeholders are resolved here, right before printing
 export const updateMargins = (value: string, values: Record<string, string>) => {
-    const frontmatter = parseFrontmatter(value) ?? {};
+    const margins = parseFrontmatter(value)?.margins ?? {};
     const scope: Record<string, unknown> = { date: today };
     for (const [key, text] of Object.entries(values)) {
         if (text.trim() && !key.startsWith("?")) scope[key] = toNumber(text);
     }
 
-    for (const key of margins) {
-        const text = frontmatter[key];
+    for (const key of boxes) {
+        const text = margins[key];
         if (text === undefined) {
             document.documentElement.removeAttribute(key);
             continue;
