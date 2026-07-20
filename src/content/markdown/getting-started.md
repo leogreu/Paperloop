@@ -219,10 +219,12 @@ You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-gi
 
 ```
 ---
-top-center: Centered header text
-bottom-left: Left-aligned footer text
+top-center: Offer for [Company]
+bottom-left: "[Reference??Draft]"
 ---
 ```
+
+Headers and footers may contain placeholders, which are filled in with the same values as the document itself, including their fallbacks and a `:currency` or `:format` suffix. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
 
 Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
 

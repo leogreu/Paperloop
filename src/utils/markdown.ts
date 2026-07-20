@@ -250,9 +250,29 @@ export const updateNumbering = (root: ParentNode) => {
     }
 };
 
+const margins = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"];
+
+// Header and footer are rendered by the @page margin boxes from attributes on <html>, which are set
+// server-side; their placeholders are therefore resolved here, on every render
+export const updateMargins = (value: string, values: Record<string, string>) => {
+    const frontmatter = parseFrontmatter(value) ?? {};
+    for (const key of margins) {
+        const text = frontmatter[key];
+        if (text === undefined) document.documentElement.removeAttribute(key);
+        else document.documentElement.setAttribute(key, String(text).replace(placeholders, (_, name, _assign, fallback, format) => {
+            const resolved = values[name] || fallback || String();
+            return format ? applyFormat(resolved, format) : resolved;
+        }));
+    }
+};
+
 export const parseFrontmatter = (value: string) => {
     const [_, match] = value.match(frontmatter) ?? [];
-    return match && parse(match);
+    try {
+        return match && parse(match);
+    } catch {
+        // Invalid YAML, e.g. while it is still being typed: treated as no frontmatter at all
+    }
 };
 
 export const updateRender: {

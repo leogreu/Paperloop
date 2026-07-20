@@ -14,7 +14,7 @@ export interface Props {
 
 <script>
     import { getParticles } from "@/utils/particles";
-    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateRender } from "@/utils/markdown";
+    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateMargins, updateRender } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
 
@@ -62,6 +62,7 @@ export interface Props {
 
             updateComputed(render!, values);
             updateNumbering(render!);
+            updateMargins(value, values);
         }
         renderDocument();
 
