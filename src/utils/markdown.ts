@@ -123,13 +123,17 @@ const toNumber = (value: string) => {
     return normalized && !isNaN(numeric) ? numeric : value;
 };
 
-// The base scope shared by calculations: the document values as numbers, plus the date() function.
-// Swedish formatting is ISO-like, which yields the local date rather than the UTC one of toISOString
+// The base scope shared by calculations: the document values as numbers, plus the now() function,
+// which returns the current instant as a full ISO timestamp (the :date suffix renders it for the reader)
 const valueScope = (values: Record<string, string>) => {
-    const scope: Record<string, unknown> = { date: () => new Date().toLocaleDateString("sv") };
+    const scope: Record<string, unknown> = {
+        now: () => new Date().toISOString()
+    };
+
     for (const [key, value] of Object.entries(values)) {
         if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
     }
+
     return scope;
 };
 

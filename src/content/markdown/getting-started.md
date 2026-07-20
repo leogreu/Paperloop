@@ -176,9 +176,9 @@ Append a format option to a placeholder or calculation to display its value nice
 
 **Available functions:**
 
-- `date()`: today's date, written as `2026-07-20` so that it stays sortable and can be used in calculations
+- `now()`: the current date and time as a full timestamp, so that it stays sortable and can be used in calculations — render it for the reader with `:date`
 
-**Example:** Today is [=date():date].
+**Example:** Today is [=now():date].
 
 To avoid repeating these settings, a document can state them once in its frontmatter, so that a plain `:currency`, `:number` or `:date` is enough. Arguments written at an option still take precedence, and each setting may be left out on its own:
 
