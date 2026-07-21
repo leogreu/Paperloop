@@ -111,10 +111,10 @@ const formatNumber = (value: number, decimals = formatting.decimals ?? 2, locale
     maximumFractionDigits: decimals
 }).format(value);
 
-const formatDate = (value: string, style: Intl.DateTimeFormatOptions["dateStyle"] = "medium",
-    locale = formatting.locale ?? navigator.language) =>
+const formatDate = (value: string, style: Intl.DateTimeFormatOptions["dateStyle"] = "medium", locale = formatting.locale ?? navigator.language) => {
     // A date-only value is parsed as UTC midnight, so anchor it to local time to avoid an off-by-one
-    new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00` : value).toLocaleDateString(locale, { dateStyle: style });
+    return new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00` : value).toLocaleDateString(locale, { dateStyle: style });
+};
 
 // Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
 const toNumber = (value: string) => {
@@ -137,23 +137,28 @@ const valueScope = (values: Record<string, string>) => {
     return scope;
 };
 
+// Renders a raw expression result, cleaning up the float noise mathjs can produce
+const renderResult = (result: unknown) =>
+    typeof result === "number" ? format(result, { precision: 14 }) : String(result ?? String());
+
 // Applies a format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
 export const applyFormat = (value: unknown, expression: string) => {
-    const input = typeof value === "string" ? toNumber(value) : value;
+    const text = renderResult(value);
+    const input = toNumber(text);
 
     try {
         // Every format leaves a value it cannot read as it is, rather than rendering an error
         const result = evaluate(expression, {
             currency: (code?: string, locale?: string) =>
-                typeof input === "number" ? formatCurrency(input, code, locale) : value,
+                typeof input === "number" ? formatCurrency(input, code, locale) : text,
             number: (decimals?: number, locale?: string) =>
-                typeof input === "number" ? formatNumber(input, decimals, locale) : value,
+                typeof input === "number" ? formatNumber(input, decimals, locale) : text,
             date: (style?: Intl.DateTimeFormatOptions["dateStyle"], locale?: string) =>
-                typeof input === "number" || isNaN(Date.parse(String(value))) ? value : formatDate(String(value), style, locale)
+                typeof input === "number" || isNaN(Date.parse(text)) ? text : formatDate(text, style, locale)
         });
         return String(typeof result === "function" ? result() : result);
     } catch {
-        return String(value);
+        return text;
     }
 };
 
@@ -209,7 +214,7 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
         try {
             const result = evaluate(element.getAttribute("expression") ?? String(), scope);
             scope[element.getAttribute("placeholder") ?? String()] = result;
-            value = typeof result === "number" ? format(result, { precision: 14 }) : String(result);
+            value = renderResult(result);
         } catch {
             // Unresolvable (e.g., empty inputs): drop the value, so the name is shown instead
         }
@@ -270,7 +275,8 @@ export const updateNumbering = (root: ParentNode) => {
     }
 };
 
-const boxes = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"];
+// Mirrors the @page margin boxes of the stylesheet, where bottom-center is taken by the page number
+const boxes = ["top-left", "top-center", "top-right", "bottom-left", "bottom-right"];
 
 // Header and footer are rendered by the @page margin boxes, which read attributes off <html>; their
 // placeholders are resolved here and set on the root element right before printing
@@ -280,7 +286,7 @@ export const updateMargins = (value: string, values: Record<string, string>) => 
 
     for (const key of boxes) {
         const text = margins[key];
-        if (text === undefined) {
+        if (text == null) {
             document.documentElement.removeAttribute(key);
             continue;
         }
@@ -290,7 +296,7 @@ export const updateMargins = (value: string, values: Record<string, string>) => 
             .replace(computed, (_, _name, expression, format) => {
                 try {
                     const result = evaluate(expression, scope);
-                    return format ? applyFormat(result, format) : String(result);
+                    return format ? applyFormat(result, format) : renderResult(result);
                 } catch {
                     return String();
                 }

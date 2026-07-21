@@ -235,7 +235,7 @@ margins:
 ---
 ```
 
-Headers and footers may contain placeholders, which are filled in with the same values as the document itself, including their fallbacks and format options. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
+Headers and footers may contain placeholders and calculations, filled in with the values you enter, including their fallbacks and format options. A name that is only calculated in the document itself is not available here — write the calculation into the header instead. The bottom center is reserved for the page number. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
 
 Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
 
