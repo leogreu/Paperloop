@@ -7,7 +7,6 @@ import { Printer } from "lucide-react";
 import Layout from "@/components/custom/layout.astro";
 import DocumentRender from "@/components/custom/document-render.astro";
 import { getPreferredLocale, getTranslations } from "@/utils/i18n";
-import { parseFrontmatter } from "@/utils/markdown";
 
 if (!Astro.locals.user) return Astro.redirect("/auth");
 
@@ -19,12 +18,11 @@ const entry = await db.select().from(Document).where(
 ).get();
 if (!entry) return Astro.redirect("/404");
 
-const frontmatter = parseFrontmatter(entry.markdown);
 const locale = getPreferredLocale(Astro.request.headers);
 const i18n = getTranslations(locale);
 ---
 
-<Layout title={entry.name} attributes={frontmatter}>
+<Layout title={entry.name}>
     <Button id="print" slot="navbar" variant="outline" size="sm">
         <Printer className="mr-2 h-4 w-4" />
         {i18n("print")}

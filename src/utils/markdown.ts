@@ -16,7 +16,7 @@ const optionals = /\[\?([^\s=?\]]+)(?:(\?\?)?=([^\]\r\n]+?))?\][ \t]*(?:\r?\n(#{
 
 // Shared trailing part with an optional display-only format suffix, closing bracket, and attribute
 // block; only known function names count as formats, so colons can occur in expressions and fallbacks
-const formats = "currency|format";
+const formats = "currency|number|date";
 const suffix = String.raw`(?::((?:${formats})\([^\]\r\n]*\)|${formats}))?\](?!\()(?:\{([^}]*)\})?`;
 // The name may be omitted when the result is only rendered and not referenced elsewhere
 const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "g");
@@ -101,7 +101,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
 // namespaced under `formatting` to not collide with frontmatter of other markdown-based tools
 let formatting: { currency?: string, decimals?: number, locale?: string } = {};
 
-const currency = (value: number, currency = formatting.currency ?? "USD", locale = formatting.locale ?? navigator.language) => new Intl.NumberFormat(locale, {
+const formatCurrency = (value: number, currency = formatting.currency ?? "USD", locale = formatting.locale ?? navigator.language) => new Intl.NumberFormat(locale, {
     style: "currency",
     currency
 }).format(value);
@@ -111,6 +111,11 @@ const formatNumber = (value: number, decimals = formatting.decimals ?? 2, locale
     maximumFractionDigits: decimals
 }).format(value);
 
+const formatDate = (value: string, style: Intl.DateTimeFormatOptions["dateStyle"] = "medium", locale = formatting.locale ?? navigator.language) => {
+    // A date-only value is parsed as UTC midnight, so anchor it to local time to avoid an off-by-one
+    return new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00` : value).toLocaleDateString(locale, { dateStyle: style });
+};
+
 // Parses numeric input incl. a decimal comma (e.g. "1,5"); non-numeric input is returned as-is
 const toNumber = (value: string) => {
     const normalized = value.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
@@ -118,19 +123,42 @@ const toNumber = (value: string) => {
     return normalized && !isNaN(numeric) ? numeric : value;
 };
 
-// Applies a :format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
+// The base scope shared by calculations: the document values as numbers, plus the now() function,
+// which returns the current instant as a full ISO timestamp (the :date suffix renders it for the reader)
+const valueScope = (values: Record<string, string>) => {
+    const scope: Record<string, unknown> = {
+        now: () => new Date().toISOString()
+    };
+
+    for (const [key, value] of Object.entries(values)) {
+        if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+    }
+
+    return scope;
+};
+
+// Renders a raw expression result, cleaning up the float noise mathjs can produce
+const renderResult = (result: unknown) =>
+    typeof result === "number" ? format(result, { precision: 14 }) : String(result ?? String());
+
+// Applies a format suffix (e.g. currency("EUR", "de")) to a value, which is bound as first argument
 export const applyFormat = (value: unknown, expression: string) => {
-    const input = typeof value === "string" ? toNumber(value) : value;
-    if (typeof input !== "number") return String(value ?? String());
+    const text = renderResult(value);
+    const input = toNumber(text);
 
     try {
+        // Every format leaves a value it cannot read as it is, rather than rendering an error
         const result = evaluate(expression, {
-            currency: (code?: string, locale?: string) => currency(input, code, locale),
-            format: (decimals?: number, locale?: string) => formatNumber(input, decimals, locale)
+            currency: (code?: string, locale?: string) =>
+                typeof input === "number" ? formatCurrency(input, code, locale) : text,
+            number: (decimals?: number, locale?: string) =>
+                typeof input === "number" ? formatNumber(input, decimals, locale) : text,
+            date: (style?: Intl.DateTimeFormatOptions["dateStyle"], locale?: string) =>
+                typeof input === "number" || isNaN(Date.parse(text)) ? text : formatDate(text, style, locale)
         });
         return String(typeof result === "function" ? result() : result);
     } catch {
-        return String(value);
+        return text;
     }
 };
 
@@ -163,15 +191,12 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
 
 // Evaluates [Name=Expression] elements in document order, so later expressions can reference earlier results
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
-    const scope: Record<string, unknown> = {};
+    const scope = valueScope(values);
 
-    // Optional toggles are in scope as booleans (requires updateOptional to have run before)
+    // Optional toggles are in scope as booleans (requires updateOptional to have run before), while
+    // placeholders of the same name take precedence, as they are already in the scope
     for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
-        scope[input.dataset.optional ?? String()] = input.checked;
-    }
-
-    for (const [key, value] of Object.entries(values)) {
-        if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+        scope[input.dataset.optional ?? String()] ??= input.checked;
     }
 
     // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered,
@@ -189,12 +214,12 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
         try {
             const result = evaluate(element.getAttribute("expression") ?? String(), scope);
             scope[element.getAttribute("placeholder") ?? String()] = result;
-            value = typeof result === "number" ? format(result, { precision: 14 }) : String(result);
+            value = renderResult(result);
         } catch {
             // Unresolvable (e.g., empty inputs): drop the value, so the name is shown instead
         }
 
-        // Store the raw result (the display getter applies any :format suffix), and only when
+        // Store the raw result (the display getter applies any format suffix), and only when
         // changed; an expression resolving to an empty string keeps the attribute and renders nothing
         if (element.getAttribute("value") === value) continue;
         if (value === null) element.removeAttribute("value");
@@ -250,9 +275,46 @@ export const updateNumbering = (root: ParentNode) => {
     }
 };
 
-export const parseFrontmatter = (value: string) => {
+// Mirrors the @page margin boxes of the stylesheet, where bottom-center is taken by the page number
+const boxes = ["top-left", "top-center", "top-right", "bottom-left", "bottom-right"];
+
+// Header and footer are rendered by the @page margin boxes, which read attributes off <html>; their
+// placeholders are resolved here and set on the root element right before printing
+export const updateMargins = (value: string, values: Record<string, string>) => {
+    const margins = parseFrontmatter(value)?.margins ?? {};
+    const scope = valueScope(values);
+
+    for (const key of boxes) {
+        const text = margins[key];
+        if (text == null) {
+            document.documentElement.removeAttribute(key);
+            continue;
+        }
+
+        // Calculations are resolved first, as the placeholder pass would otherwise consume them
+        document.documentElement.setAttribute(key, String(text)
+            .replace(computed, (_, _name, expression, format) => {
+                try {
+                    const result = evaluate(expression, scope);
+                    return format ? applyFormat(result, format) : renderResult(result);
+                } catch {
+                    return String();
+                }
+            })
+            .replace(placeholders, (_, name, _assign, fallback, format) => {
+                const resolved = values[name] || fallback || String();
+                return format ? applyFormat(resolved, format) : resolved;
+            }));
+    }
+};
+
+const parseFrontmatter = (value: string) => {
     const [_, match] = value.match(frontmatter) ?? [];
-    return match && parse(match);
+    try {
+        return match && parse(match);
+    } catch {
+        // Invalid YAML, e.g. while it is still being typed: treated as no frontmatter at all
+    }
 };
 
 export const updateRender: {

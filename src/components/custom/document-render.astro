@@ -14,7 +14,7 @@ export interface Props {
 
 <script>
     import { getParticles } from "@/utils/particles";
-    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateRender } from "@/utils/markdown";
+    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateMargins, updateRender } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
 
@@ -64,6 +64,10 @@ export interface Props {
             updateNumbering(render!);
         }
         renderDocument();
+
+        // Header and footer only exist while printing, so they are resolved right before it;
+        // assigned rather than added, as this runs again on every page load
+        window.onbeforeprint = () => updateMargins(value, values);
 
         // And renders based triggered by parents
         updateRender.setValue = input => {

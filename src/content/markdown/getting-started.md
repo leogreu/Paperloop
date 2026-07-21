@@ -166,11 +166,21 @@ You can calculate values from other placeholders by writing an expression after 
 
 **Example:** The net price is [Net:currency], so the gross price is [Gross=Net*1.19:currency].
 
-Append `:currency` to a placeholder or calculation to display it as a currency amount — the raw number stays available for further calculations, and inputs switch back to the raw value while you edit them. Two optional arguments set the currency and the language, e.g. `:currency("EUR", "de")` — by default, USD and your browser language are used.
+Append a format option to a placeholder or calculation to display its value nicely. The raw value stays available for further calculations, and inputs switch back to it while you edit them. Each option takes optional arguments, the last of which is always the language.
 
-Similarly, append `:format` to display a plain formatted number, with optional arguments for the number of decimal places and the language, e.g. `:format(2, "de")`.
+**Available format options:**
 
-To avoid repeating these settings, a document can state them once in its frontmatter, after which a plain `:currency` or `:format` is enough. Arguments written at a suffix still take precedence, and each setting may be left out on its own:
+- `:currency`: a currency amount, with the currency and the language, e.g. `:currency("EUR", "de")`
+- `:number`: a plain number, with the decimal places and the language, e.g. `:number(2, "de")`
+- `:date`: a date, with the style (`short`, `medium`, `long` or `full`) and the language, e.g. `:date("long")`
+
+**Available functions:**
+
+- `now()`: the current date and time as a full timestamp, so that it stays sortable and can be used in calculations — render it for the reader with `:date`
+
+**Example:** Today is [=now():date].
+
+To avoid repeating these settings, a document can state them once in its frontmatter, so that a plain `:currency`, `:number` or `:date` is enough. Arguments written at an option still take precedence, and each setting may be left out on its own:
 
 ```
 ---
@@ -219,10 +229,13 @@ You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-gi
 
 ```
 ---
-top-center: Centered header text
-bottom-left: Left-aligned footer text
+margins:
+  top-center: Offer for [Company]
+  bottom-left: "[Reference??Draft]"
 ---
 ```
+
+Headers and footers may contain placeholders and calculations, filled in with the values you enter, including their fallbacks and format options. A name that is only calculated in the document itself is not available here — write the calculation into the header instead. The bottom center is reserved for the page number. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
 
 Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
 
