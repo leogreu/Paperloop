@@ -162,7 +162,9 @@ export const applyFormat = (value: unknown, expression: string) => {
     }
 };
 
-// Resolves derived optional toggles, whose expressions evaluate to a boolean (e.g. "not other")
+// Resolves derived optional toggles, whose expressions evaluate to a boolean (e.g. "not other"),
+// and lifts every toggle state to the block it governs; must run before updateComputed and
+// updateNumbering, which read the resulting classes
 export const updateOptional = (root: ParentNode, values: Record<string, string>) => {
     const scope: Record<string, boolean> = {};
     const derived: HTMLInputElement[] = [];
@@ -186,6 +188,28 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
 
         input.checked = state;
         scope[input.dataset.optional ?? String()] = state;
+    }
+
+    for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
+        const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
+        if (!block) continue;
+
+        // A marker in a heading toggles the whole section, up to the next same- or higher-level heading
+        const section = [block];
+        if (/^H[1-6]$/.test(block.tagName)) {
+            let sibling = block.nextElementSibling;
+            while (sibling && !(/^H[1-6]$/.test(sibling.tagName) && sibling.tagName <= block.tagName)) {
+                section.push(sibling);
+                sibling = sibling.nextElementSibling;
+            }
+        }
+
+        // Blocks start out included after each render, so a block is excluded as soon as any toggle
+        // governing it is off — an inner one therefore still applies within a section
+        for (const element of section) {
+            element.setAttribute("data-optional", input.dataset.optional ?? String());
+            if (!input.checked) element.classList.add("excluded");
+        }
     }
 };
 
