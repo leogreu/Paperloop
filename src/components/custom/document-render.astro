@@ -34,32 +34,7 @@ export interface Props {
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);
 
-            // Resolve derived toggles, then lift their state to the containing block (paragraph,
-            // bullet, or table row); must run before updateComputed and updateNumbering, which
-            // read the resulting classes
             updateOptional(render!, values);
-            for (const input of render!.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
-                const block = input.closest("li, tr") ?? input.closest("p, h1, h2, h3, h4, h5, h6");
-                if (!block) continue;
-
-                // A marker in a heading toggles the whole section, up to the next same- or higher-level heading
-                const section = [block];
-                if (/^H[1-6]$/.test(block.tagName)) {
-                    let sibling = block.nextElementSibling;
-                    while (sibling && !(/^H[1-6]$/.test(sibling.tagName) && sibling.tagName <= block.tagName)) {
-                        section.push(sibling);
-                        sibling = sibling.nextElementSibling;
-                    }
-                }
-
-                // Blocks start out included after the render above, so a block is excluded as soon
-                // as any toggle governing it is off — an inner one still applies within a section
-                for (const element of section) {
-                    element.setAttribute("data-optional", input.dataset.optional ?? String());
-                    if (!input.checked) element.classList.add("excluded");
-                }
-            }
-
             updateComputed(render!, values);
             updateNumbering(render!);
         }
