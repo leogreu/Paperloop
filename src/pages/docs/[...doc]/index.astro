@@ -85,11 +85,53 @@ const client = getClientTranslations(locale);
     import { actions } from "astro:actions";
     import { navigate } from "astro:transitions/client";
     import { standardKeymap, historyKeymap, history } from "@codemirror/commands";
+    import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
+    import { EditorSelection } from "@codemirror/state";
     import { EditorView, keymap, placeholder } from "@codemirror/view";
     import { markdown } from "@codemirror/lang-markdown";
+    import { tags } from "@lezer/highlight";
+    import type { SyntaxNode } from "@lezer/common";
     import { getParticles } from "@/utils/particles";
     import { updateRender } from "@/utils/markdown";
     import { debounce } from "@/utils/debounce";
+
+    const markdownHighlight = HighlightStyle.define([
+        { tag: tags.heading, fontWeight: "600" },
+        { tag: tags.strong, fontWeight: "600" },
+        { tag: tags.emphasis, fontStyle: "italic" },
+        { tag: tags.strikethrough, textDecoration: "line-through" },
+        { tag: tags.link, textDecoration: "underline", textUnderlineOffset: "2px" },
+        { tag: tags.url, color: "hsl(var(--muted-foreground))" },
+        { tag: tags.monospace, fontFamily: "monospace" },
+        { tag: tags.processingInstruction, color: "hsl(var(--muted-foreground))" }
+    ]);
+
+    const toggleMark = (marker: string, node: string) => (view: EditorView) => {
+        if (!view.state.facet(EditorView.editable)) return false;
+
+        view.dispatch(view.state.changeByRange(range => {
+            let found: SyntaxNode | null = syntaxTree(view.state).resolveInner(range.from, 1);
+            while (found && found.name !== node) found = found.parent;
+
+            if (found && found.to >= range.to) {
+                const changes = view.state.changes([
+                    { from: found.from, to: found.from + marker.length },
+                    { from: found.to - marker.length, to: found.to }
+                ]);
+                return { changes, range: range.map(changes) };
+            }
+
+            const changes = view.state.changes([
+                { from: range.from, insert: marker },
+                { from: range.to, insert: marker }
+            ]);
+            return {
+                changes,
+                range: EditorSelection.range(range.from + marker.length, range.to + marker.length)
+            };
+        }));
+        return true;
+    };
 
     document.addEventListener("astro:page-load", () => {
         const editor = document.getElementById("editor");
@@ -115,8 +157,14 @@ const client = getClientTranslations(locale);
                 EditorView.lineWrapping,
                 keymap.of(standardKeymap),
                 keymap.of(historyKeymap),
+                keymap.of([
+                    { key: "Mod-b", run: toggleMark("**", "StrongEmphasis") },
+                    { key: "Mod-i", run: toggleMark("*", "Emphasis") },
+                    { key: "Mod-u", run: () => true }
+                ]),
                 history(),
                 markdown(),
+                syntaxHighlighting(markdownHighlight),
                 placeholder(fallback),
                 EditorView.editable.of(!version),
                 EditorView.updateListener.of(update => {
