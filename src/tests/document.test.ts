@@ -21,7 +21,17 @@ describe("the getting-started document", () => {
 
         expect(headings).toContain("11. Optional blocks");
         expect(headings).toContain("12. Calculations");
-        expect(headings).toContain("14. Headers and footers");
+        expect(headings).toContain("13. Repetitions");
+        expect(headings).toContain("15. Headers and footers");
+    });
+
+    test("repeats the example rows along with the entered number of years", () => {
+        const rows = (values: Record<string, string>) => [...renderDocument(markdown, values).querySelectorAll("tbody tr")]
+            .filter(row => row.querySelector('[placeholder^="Fee_"]')).length;
+
+        expect(rows({})).toBe(3);
+        expect(rows({ Years: "6" })).toBe(6);
+        expect(placeholder(renderDocument(markdown, {}), "Total")?.getAttribute("value")).toBe("2710");
     });
 
     test("resolves the now() example to a full timestamp", () => {
