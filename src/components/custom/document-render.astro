@@ -14,7 +14,7 @@ export interface Props {
 
 <script>
     import { getParticles } from "@/utils/particles";
-    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateMargins, updateRender } from "@/utils/markdown";
+    import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateMargins, updateRender, repetitionInputs } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
 
@@ -61,6 +61,16 @@ export interface Props {
                 const { value, placeholder } = target;
                 values[placeholder] = value;
                 if (doc) localStorage.setItem(doc, JSON.stringify(values));
+
+                // A repetition bound changes which rows exist, so the document is rendered anew,
+                // continuing in the same occurrence of the field that is being typed in
+                if (repetitionInputs.has(placeholder)) {
+                    const selector = `content-editable[placeholder="${placeholder}"]`;
+                    const index = [...render.querySelectorAll(selector)].indexOf(target);
+                    renderDocument();
+                    render.querySelectorAll<ContentEditable>(selector)[index]?.focusEnd();
+                    return;
+                }
 
                 // Update inputs sharing the same placeholder (i.e., variable name)
                 for (const element of render.querySelectorAll(`[placeholder="${placeholder}"]`)) {
