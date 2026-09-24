@@ -79,14 +79,10 @@ const expandRepetitions = (text: string, values: Record<string, string>) => {
         }
     };
 
-    // Markers within code blocks or code spans merely show the syntax, so their lines stay as they are
-    let fenced = false;
+    // A marker within a code span merely shows the syntax, so its line stays as it is
     return text.split("\n").flatMap(line => {
-        if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
-
         const match = line.match(repetitions);
-        const quoted = (line.slice(0, match?.index).match(/`/g)?.length ?? 0) % 2 === 1;
-        if (!match || fenced || quoted) return line;
+        if (!match || (line.slice(0, match.index).match(/`/g)?.length ?? 0) % 2) return line;
 
         const [, counter, from = "1", to] = match;
         const start = resolve(from);

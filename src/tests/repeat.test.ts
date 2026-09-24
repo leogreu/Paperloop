@@ -39,11 +39,10 @@ describe("repeated lines", () => {
         expect(cells(renderDocument(table(`| 1 | {Year} |`)))).toEqual(["1"]);
     });
 
-    test("leaves markers in code spans and code blocks as they are", () => {
-        const root = renderDocument("Write `[#Year=Years]` to repeat a line.\n\n```\n| [#Year=3] {Year} |\n```");
+    test("leaves markers in code spans as they are", () => {
+        const root = renderDocument("Write `[#Year=Years]` to repeat a line.");
 
         expect(root.querySelector("p")?.textContent).toMatch(/^Write .* to repeat a line\.$/);
-        expect(root.querySelector("pre")?.textContent).toContain("{Year}");
         expect(repetitionInputs.size).toBe(0);
     });
 });
