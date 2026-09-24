@@ -23,6 +23,14 @@ const computed = new RegExp(String.raw`\[([^\s=?\]]*)=([^\]\r\n]+?)${suffix}`, "
 // An empty fallback ([Name??]) marks an optional field, which prints nothing while it is empty
 const placeholders = new RegExp(String.raw`\[([^\s:?\]]+)(?:\?\?(=?)([^\]\r\n]*?))?${suffix}`, "g");
 
+// A line carrying [#Counter=From..To] is repeated once per counter value, with the lower bound
+// defaulting to 1 ([#Counter=To]); {Counter} or {Counter-1} insert the value anywhere in the line
+const repetitions = /\[#([^\s=?\]{}]+)=(?:([^\]\r\n]+?)\.\.)?([^\]\r\n]+?)\][ \t]*/;
+// Caps the rows a mistyped bound can produce, e.g. 1000 instead of 10
+const repetitionLimit = 100;
+// A trailing _* stands for every Name_<number> of the document, e.g. sum(Total_*)
+const wildcards = /(?<![\p{L}\p{N}_])([\p{L}\p{N}_]+)_\*/gu;
+
 export const encodeHTML = (value: string) => md.utils.escapeHtml(value);
 
 // Additionally encodes line breaks, which would otherwise break inline HTML during markdown parsing
@@ -46,15 +54,74 @@ const renderEditable = (attributes: string | undefined, properties: Record<strin
     return `<content-editable ${renderAttributes({ class: classes, ...properties })} ${flags}></content-editable>`;
 };
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// The names a repetition bound references; entering one of them changes the document structure,
+// so the document has to be rendered anew rather than only recalculated
+export const repetitionInputs = new Set<string>();
+
+// Expands repeated lines on the plain text, so every copy is ordinary markdown whose placeholders,
+// calculations, and optional blocks work as if written by hand
+const expandRepetitions = (text: string, values: Record<string, string>) => {
+    // Bounds are resolved before any placeholder is rendered, so fallbacks are read off the text
+    // directly and count as in updateComputed; calculated names are not available here
+    const scope = valueScope(values);
+    for (const [, key, assign, fallback] of text.matchAll(placeholders)) {
+        if (fallback !== undefined) scope[key] ??= assign && values[key] === undefined ? toNumber(fallback) : 0;
+    }
+
+    const resolve = (expression: string) => {
+        for (const name of expression.match(/[\p{L}_][\p{L}\p{N}_]*/gu) ?? []) repetitionInputs.add(name);
+        try {
+            return Math.floor(Number(evaluate(expression, scope)));
+        } catch {
+            return NaN;
+        }
+    };
+
+    // A marker within a code span merely shows the syntax, so its line stays as it is
+    return text.split("\n").flatMap(line => {
+        const match = line.match(repetitions);
+        if (!match || (line.slice(0, match.index).match(/`/g)?.length ?? 0) % 2) return line;
+
+        const [, counter, from = "1", to] = match;
+        const start = resolve(from);
+        const count = Math.min(resolve(to) - start + 1, repetitionLimit);
+
+        // An unresolvable bound (e.g., an empty input) yields no rows at all, just like a count below one
+        if (!(count > 0)) return [];
+
+        const template = line.replace(repetitions, String());
+        const insertions = new RegExp(String.raw`\{${escapeRegExp(counter)}\s*(?:([+-])\s*(\d+)\s*)?\}`, "g");
+        return Array.from({ length: count }, (_, index) => template.replace(insertions, (_, sign, offset) =>
+            String(start + index + (sign === "-" ? -1 : 1) * Number(offset ?? 0))
+        ));
+    }).join("\n");
+};
+
+// Lists every matching name in numeric order and comma-separated, as arguments for sum(), max() or
+// mean(); without any match, the wildcard stands for 0, as these functions require an argument
+const expandWildcards = (expression: string, names: string[]) => expression.replace(wildcards, (_, base) => {
+    const pattern = new RegExp(`^${escapeRegExp(base)}_\\d+$`);
+    const ordinal = (name: string) => Number(name.slice(base.length + 1));
+    const matches = names.filter(name => pattern.test(name)).sort((a, b) => ordinal(a) - ordinal(b));
+
+    return matches.length ? matches.join(", ") : "0";
+});
+
 export const markdownToHTML = (value: string, values: Record<string, string>) => {
     formatting = parseFrontmatter(value)?.formatting ?? {};
+    repetitionInputs.clear();
+
+    // Must run first, as every later pass relies on the repeated lines being plain markdown
+    const expanded = expandRepetitions(value.replace(frontmatter, String()), values);
+    const names = [...new Set([...expanded.matchAll(/\[([^\s=?:\]]+)/g)].map(([, name]) => name))];
 
     // TODO: Evaluate whether to create markdown-it plugin
     const fallbacks: Record<string, [string, string]> = {};
     const expressions: Record<string, [string, string]> = {};
     const calculations: Record<string, string> = {};
-    const replaced = value
-        .replace(frontmatter, String())
+    const replaced = expanded
         // Must run before the placeholder pass, which would otherwise consume [?name] tokens
         .replace(optionals, (_, key, assign, expression, heading) => {
             // An expression applies to every occurrence of its toggle, defined at the first one
@@ -74,6 +141,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
         })
         // Must also run before the placeholder pass, which would otherwise consume spaceless expressions
         .replace(computed, (_, key, expression, format, attributes) => {
+            expression = expandWildcards(expression, names);
             if (key) calculations[key] = expression;
             return renderEditable(attributes, { expression, placeholder: key, format }, "readonly");
         })

@@ -139,15 +139,24 @@ export class ContentEditable extends HTMLElement {
         this.addEventListener("focus", () => {
             if (this.hasAttribute("format") && this.content.textContent !== this.value) {
                 this.content.textContent = this.value;
-
-                const range = document.createRange();
-                range.selectNodeContents(this.content);
-                range.collapse(false);
-                const selection = window.getSelection();
-                selection?.removeAllRanges();
-                selection?.addRange(range);
+                this.moveCaretToEnd();
             }
         });
+    }
+
+    // Focuses the field with the caret after its content, e.g. to continue typing after a render
+    focusEnd() {
+        this.content.focus();
+        this.moveCaretToEnd();
+    }
+
+    moveCaretToEnd() {
+        const range = document.createRange();
+        range.selectNodeContents(this.content);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
     }
 
     attributeChangedCallback(name: string, _: string, value: string | null) {

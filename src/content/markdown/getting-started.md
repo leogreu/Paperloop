@@ -203,7 +203,26 @@ Expressions can also result in text rather than a number. Wrap it in straight qu
 
 If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. A condition can also reference an optional block by its name, which is true while the block is included. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
 
-## 13. Alignment {#alignment}
+## 13. Repetitions
+
+Some tables grow with a value you enter, like one row per year of a contract. Instead of writing each row by hand, mark a single row with `[#Counter=From..To]` and it is repeated once per value of the counter. The bounds may reference placeholders, and the rows follow as soon as you change them. Leave out the lower bound, as in `[#Year=Years]`, to start at 1.
+
+Within the row, `{Year}` inserts the current value of the counter, and `{Year-1}` or `{Year+1}` a neighboring one. This works in plain text as well as in placeholder names, so each row can calculate its own values and reference the row before. A row written by hand, like the first one below, blends in seamlessly.
+
+To add up a repeated column, write its name followed by `_*`: `sum(Fee_*)` adds `Fee_1`, `Fee_2`, and so on, however many rows there are. This also works with `max()`, `min()` and `mean()`.
+
+**Example:** [Years??=3] years at [Fee??=1000:currency] per year, with a discount of [Discount??=10] % on the previous year.
+
+| Year | Fee |
+|------|----:|
+| 1 | [Fee_1=Fee:currency] |
+| [#Year=2..Years] {Year} | [Fee_{Year}=Fee_{Year-1} * (1 - Discount / 100):currency] |
+
+**Total:** [Total=sum(Fee_*):currency]
+
+Like in headers and footers, the bounds can only reference placeholders you fill in, not names that are calculated in the document. A single marker repeats up to 100 rows, and rows that are removed by lowering a bound keep their entered values, should you raise it again.
+
+## 14. Alignment {#alignment}
 
 Paperloop also allows you to align text using [Tailwind CSS](https://tailwindcss.com/) classes. If you want a sentence or word to be right-aligned, simple add `{.text-right}` to the end.
 
@@ -223,7 +242,7 @@ John Doe
 Metropolis, CA 90210
 {.text-right .prose-img:w-8 .prose-img:mb-2}
 
-## 14. Headers and footers
+## 15. Headers and footers
 
 You can use [Frontmatter](https://docs.github.com/en/contributing/writing-for-github-docs/using-yaml-frontmatter) to add headers and footers to your pages when printing a document. To do this, add the following block to the beginning of your document.
 
