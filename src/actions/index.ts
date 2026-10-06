@@ -42,6 +42,7 @@ export const server = {
             } else {
                 context.cookies.delete("sb-access-token", { path: "/" });
                 context.cookies.delete("sb-refresh-token", { path: "/" });
+                return "/auth";
             }
         }
     }),

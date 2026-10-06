@@ -1,5 +1,5 @@
 ---
-import { ViewTransitions } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 import Navbar from "@/components/custom/navbar.astro";
 
 interface Props {
@@ -25,7 +25,7 @@ const { title, description, locale, continuous } = Astro.props;
         <meta name="generator" content={Astro.generator} />
         <title>{title} | Paperloop</title>
         <slot name="head"></slot>
-        <ViewTransitions />
+        <ClientRouter />
     </head>
     <body class={`antialiased ${!continuous ? "h-full flex flex-col" : ""}`}>
         <Navbar>
