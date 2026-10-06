@@ -191,6 +191,11 @@ const toNumber = (value: string) => {
     return normalized && !isNaN(numeric) ? numeric : value;
 };
 
+// A value prefixed with ? (e.g. "?2400") is shown and printed like a fallback, but counts as zero
+// like one, so an optional price can be adjusted per document without entering any total
+const displayOnly = /^\s*\?/;
+export const displayValue = (value: string) => value.replace(displayOnly, String());
+
 // The base scope shared by calculations: the document values as numbers, plus the now() function,
 // which returns the current instant as a full ISO timestamp (the :date suffix renders it for the reader)
 const valueScope = (values: Record<string, string>) => {
@@ -199,7 +204,7 @@ const valueScope = (values: Record<string, string>) => {
     };
 
     for (const [key, value] of Object.entries(values)) {
-        if (value.trim() && !key.startsWith("?")) scope[key] = toNumber(value);
+        if (value.trim() && !key.startsWith("?")) scope[key] = displayOnly.test(value) ? 0 : toNumber(value);
     }
 
     return scope;
@@ -394,7 +399,7 @@ export const updateMargins = (value: string, values: Record<string, string>) => 
                 }
             })
             .replace(placeholders, (_, name, _assign, fallback, format) => {
-                const resolved = values[name] || fallback || String();
+                const resolved = displayValue(values[name] ?? String()) || fallback || String();
                 return format ? applyFormat(resolved, format) : resolved;
             }));
     }

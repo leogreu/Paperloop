@@ -27,6 +27,12 @@ describe("placeholders", () => {
         expect(margin("top-right")).toBe("Draft");
     });
 
+    test("show a ?-prefixed value without its prefix", () => {
+        withMargins(`  top-left: "Fee: [Fee??1200]"`, { Fee: "?2400" });
+
+        expect(margin("top-left")).toBe("Fee: 2400");
+    });
+
     test("apply their format suffix", () => {
         withMargins(`  top-left: "Total: [Total:currency]"`, { Total: "1234.5" });
 

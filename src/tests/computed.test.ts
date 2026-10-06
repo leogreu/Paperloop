@@ -90,6 +90,19 @@ describe("optional placeholders in calculations", () => {
     test("an empty optional field counts as zero", () => {
         expect(value(renderDocument(`[Note??] [Sum=Note+5]`, {}), "Sum")).toBe("5");
     });
+
+    test("a ?-prefixed value counts as zero, just like a fallback", () => {
+        expect(value(renderDocument(`[Module??1200] [Sum=Module+100]`, { Module: "?2400" }), "Sum")).toBe("100");
+        expect(value(renderDocument(`[Module??=1200] [Sum=Module+100]`, { Module: "?2400" }), "Sum")).toBe("100");
+        expect(value(renderDocument(`[Module] [Sum=Module+100]`, { Module: " ?2400" }), "Sum")).toBe("100");
+    });
+
+    test("a ?-prefixed value keeps an optional label in place", () => {
+        const markdown = `[Intro=Module ? "" : "Optional: "][Module??1200]`;
+
+        expect(value(renderDocument(markdown, { Module: "?2400" }), "Intro")).toBe("Optional: ");
+        expect(value(renderDocument(markdown, { Module: "2400" }), "Intro")).toBe("");
+    });
 });
 
 describe("optional blocks in calculations", () => {

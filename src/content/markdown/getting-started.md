@@ -203,6 +203,8 @@ For optional placeholders, append `??` with a fallback value that is shown and p
 
 **Example:** Optional placeholder: [Variable??1200:currency].
 
+To adjust such a value for a single document without it entering your calculations, start your entry with a question mark, as in `?2400`. It is then shown and printed without the question mark, like a fallback, and also counts as zero like one. This way, an optional price can be changed for one offer while it stays out of every total.
+
 Expressions can also result in text rather than a number. Wrap it in straight quotes (single or double), which may contain spaces and colons, and use a condition to decide between two of them. This way, a label can be shown only while a placeholder is still empty, and disappear as soon as it is filled in — on screen as well as in print.
 
 **Example:** [Intro=Amount ? "" : "Optional: "][Amount??500:currency]

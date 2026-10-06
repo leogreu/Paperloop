@@ -1,4 +1,4 @@
-import { applyFormat, encodeHTML } from "@/utils/markdown";
+import { applyFormat, displayValue, encodeHTML } from "@/utils/markdown";
 
 export class ContentEditable extends HTMLElement {
     static observedAttributes = ["value", "placeholder"];
@@ -6,10 +6,12 @@ export class ContentEditable extends HTMLElement {
     value = String();
     placeholder = String();
 
-    // The formatted representation shown while not editing; the raw value stays in `value`
+    // The formatted representation shown while not editing, without a display-only ? prefix;
+    // the raw value stays in `value`
     get display() {
         const format = this.getAttribute("format");
-        return format && this.value ? applyFormat(this.value, format) : this.value;
+        const value = displayValue(this.value);
+        return format && value ? applyFormat(value, format) : value;
     }
 
     // Shown in gray while empty: the formatted fallback if present, the placeholder name otherwise
@@ -135,9 +137,9 @@ export class ContentEditable extends HTMLElement {
 
         this.addEventListener("blur", this.highlightTag);
 
-        // Formatted values are edited raw, like spreadsheet cells
+        // Formatted and display-only values are edited raw, like spreadsheet cells
         this.addEventListener("focus", () => {
-            if (this.hasAttribute("format") && this.content.textContent !== this.value) {
+            if (this.content.textContent !== this.value) {
                 this.content.textContent = this.value;
                 this.moveCaretToEnd();
             }
