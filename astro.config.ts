@@ -8,6 +8,13 @@ import vercel from "@astrojs/vercel";
 export default defineConfig({
     output: "server",
     adapter: vercel(),
+    security: {
+        allowedDomains: [
+            { hostname: "paperloop.io" },
+            { hostname: "www.paperloop.io" },
+            { hostname: "*.vercel.app" }
+        ]
+    },
     i18n: {
         defaultLocale: "en",
         locales: ["en", "de"]
