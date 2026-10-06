@@ -258,6 +258,27 @@ Headers and footers may contain placeholders and calculations, filled in with th
 
 Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
 
+## 16. Importing values
+
+Instead of filling in a document field by field, you can also fill it in at once: copy a JSON object with all values, e.g. one prepared by an AI agent, and click the clipboard button above the preview. Try it with this document:
+
+```json
+{
+  "Name": "Ada",
+  "Net": 1200,
+  "Years": 5,
+  "Discount": 5,
+  "?self-hosting": true,
+  "?extended": false
+}
+```
+
+The object is flat, with the names of your placeholders as keys. An optional block is included with `"?name": true` and excluded with `false`. Fields in repeated rows are addressed by their full name, like `Fee_2`. Calculated names are left out, as they are always calculated anew.
+
+Values are entered raw, just like you would type them into a field: numbers without thousands separators, currency symbols or units (`1200.5` or `"1200,5"`, but not `"1.200,50 €"`), and dates as `"2026-10-06"`. The format options take care of displaying them nicely.
+
+Please note that importing replaces all values of the document. And as values are stored under the names of their placeholders, renaming a placeholder in the document leaves its previous value behind.
+
 ---
 
 That's it for now. We hope you could learn something. If you have any questions left, just send us an email or open an issue over at [GitHub](https://github.com/leogreu/Paperloop/issues).

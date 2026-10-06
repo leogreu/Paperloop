@@ -12,6 +12,7 @@ Paperloop separates the static from the dynamic parts of your documents. Write a
 - **Formatting** — Append `:currency`, `:number` or `:date` to a placeholder or calculation to display its value nicely, while the raw value stays available for further calculations and editing. Each option takes optional arguments, and a document can set its defaults once in the frontmatter.
 - **Styling and alignment** — Align or style text and images with Tailwind CSS classes, e.g. `{.text-right}` at the end of a line or paragraph.
 - **Headers and footers** — Define print headers and footers via frontmatter at the top of a document, rendered with CSS page-margin boxes including page numbers. They may contain placeholders and calculations, which are filled in with the same values as the document itself.
+- **Value import** — Paste a JSON object of values via the clipboard button in the preview to fill in a document at once, e.g. one prepared by an AI agent. The [getting started guide](src/content/markdown/getting-started.md) describes the full syntax and the value format, and can be handed to an agent as is.
 - **Versions and diffs** — Publish read-only versions of a document and browse the full history side by side, with word-level diff highlighting between versions.
 
 ## Development
