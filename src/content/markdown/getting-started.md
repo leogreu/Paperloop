@@ -160,7 +160,7 @@ A block can also derive its state from an expression, following the same syntax 
 
 [?basic=not extended] And this one is shown automatically whenever the block above is not.
 
-Expressions result in true or false and may reference other blocks by name, e.g. `not other`, `first and not second`, or `other ? false : true`. Please note that `!` is not supported, as it means factorial. A referenced block can be placed anywhere in the document, unless its own state is derived as well — in that case, it needs to be defined earlier. Like fallbacks, the expression is defined at the first occurrence of a name and then applies to all of them.
+Expressions result in true or false and may reference other blocks by name, e.g. `not other`, `first and not second`, or `other ? false : true`. Please note that `!` is not supported, as it means factorial. A block you want to reference needs a simple name, like `self_hosting`, as `not self-hosting` would be read as a subtraction. A referenced block can be placed anywhere in the document, unless its own state is derived as well — in that case, it needs to be defined earlier. Like fallbacks, the expression is defined at the first occurrence of a name and then applies to all of them.
 
 For paragraphs spanning multiple lines, you can also place the marker on its own line directly above the text. And if you place it in front of a heading (or inside it, like `## [?name] Title`), the entire section is toggled — from the heading up to the next heading of the same or a higher level.
 
@@ -302,6 +302,17 @@ The object is flat, with the names of your placeholders as keys. An optional blo
 Values are entered raw, just like you would type them into a field: numbers without thousands separators, currency symbols or units (`1200.5` or `"1200,5"`, but not `"1.200,50 €"`), and dates as `"2026-10-06"`. The format options take care of displaying them nicely. A line break within a value, as in a multi-line address, is written as `\n`, e.g. `"Address": "Main Street 1\n12345 Springfield"`. A value that is only shown, like `?2400`, is written as text: `"?2400"`.
 
 Please note that importing replaces all values of the document. And as values are stored under the names of their placeholders, renaming a placeholder in the document leaves its previous value behind.
+
+---
+
+## 17. Common pitfalls
+
+When a document does not show what you expect, one of the following is usually the cause:
+
+- **A calculation shows its name instead of a result:** a placeholder it references is still empty and has no fallback, or a calculation it builds on cannot be resolved either.
+- **A total is lower than expected:** a value sits in an excluded block, starts with `?`, or is `0`, all of which count as zero.
+- **A block ignores an imported or clicked state:** it follows its expression with a single `=`, or the expression references a name with a hyphen.
+- **A field shows its name in gray:** it is still empty, and is printed as an empty box to fill in. Give it a fallback, or mark it as optional with `[Name??]` to print nothing instead.
 
 ---
 
