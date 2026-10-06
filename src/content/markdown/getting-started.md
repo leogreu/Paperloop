@@ -132,6 +132,10 @@ When you use a placeholder with the same variable name, it will get the same val
 
 **Example:** Thank you for reading this, [Name].
 
+The values you enter are saved per document in your browser. They are not synced, so they will not show up in another browser or on another device.
+
+---
+
 ## 11. Optional blocks
 
 Sometimes a paragraph, bullet point, or table row only applies to some documents. Mark it optional by starting it with `[?name]`, and it will show a checkbox in the rendered document. Unchecked blocks appear faded and are left out entirely when printing, while checked blocks print like normal content.
@@ -146,7 +150,7 @@ Sometimes a paragraph, bullet point, or table row only applies to some documents
 | Base setup | 250 € |
 | [?self-hosting] On-premise setup | 500 € |
 
-Blocks with the same name are toggled together — just like placeholders sharing a value. Your choices are saved per document.
+Blocks with the same name are toggled together — just like placeholders sharing a value. Your choices are saved along with the values.
 
 A block can also derive its state from an expression, following the same syntax as placeholders. With `??=` the expression only sets the initial state, so you can still toggle the block yourself. With a single `=` the block always follows its expression, and its checkbox is disabled.
 
@@ -159,6 +163,8 @@ Expressions result in true or false and may reference other blocks by name, e.g.
 For paragraphs spanning multiple lines, you can also place the marker on its own line directly above the text. And if you place it in front of a heading (or inside it, like `## [?name] Title`), the entire section is toggled — from the heading up to the next heading of the same or a higher level.
 
 Numbered headings (like `## 3. Title`), table rows whose first cell is a number, and numbered lists are renumbered automatically as optional blocks are toggled — excluded entries lose their number until they are included.
+
+---
 
 ## 12. Calculations
 
@@ -203,9 +209,11 @@ Expressions can also result in text rather than a number. Wrap it in straight qu
 
 If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. A condition can also reference an optional block by its name, which is true while the block is included. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
 
+---
+
 ## 13. Repetitions
 
-Some tables grow with a value you enter, like one row per year of a contract. Instead of writing each row by hand, mark a single row with `[#Counter=From..To]` and it is repeated once per value of the counter. The bounds may reference placeholders, and the rows follow as soon as you change them. Leave out the lower bound, as in `[#Year=Years]`, to start at 1.
+Some tables grow with a value you enter, like one row per year of a contract. Instead of writing each row by hand, mark a single row with `[#Counter=From..To]` and it is repeated once per value of the counter. This works for list items and other lines as well. The bounds may reference placeholders, and the rows follow as soon as you change them. Leave out the lower bound, as in `[#Year=Years]`, to start at 1.
 
 Within the row, `{Year}` inserts the current value of the counter, and `{Year-1}` or `{Year+1}` a neighboring one. This works in plain text as well as in placeholder names, so each row can calculate its own values and reference the row before. A row written by hand, like the first one below, blends in seamlessly.
 
@@ -222,25 +230,29 @@ To add up a repeated column, write its name followed by `_*`: `sum(Fee_*)` adds 
 
 Like in headers and footers, the bounds can only reference placeholders you fill in, not names that are calculated in the document. A single marker repeats up to 100 rows, and rows that are removed by lowering a bound keep their entered values, should you raise it again.
 
+---
+
 ## 14. Alignment {#alignment}
 
-Paperloop also allows you to align text using [Tailwind CSS](https://tailwindcss.com/) classes. If you want a sentence or word to be right-aligned, simple add `{.text-right}` to the end.
+Paperloop also allows you to align text using [Tailwind CSS](https://tailwindcss.com/) classes. If you want a sentence or word to be right-aligned, simply add `{.text-right}` to the end.
 
 This text is on the right {.text-right}
 
-You can also align an multi-line paragraphs:
+You can also align multi-line paragraphs:
 
-**This is a centered text block**
+**This is a right-aligned text block**
 with text on multiple lines.
 {.text-right}
 
-You can use the same syntax to align images. Together with the option to resize them using `img-w-8` (where 8 stands for a size unit in [Tailwind](https://tailwindcss.com/docs/width)), you can create a custom letter header for your company. The suffix `img-mb-2:` lets you specify the space below an image (margin bottom, as explained [here](https://tailwindcss.com/docs/margin)).
+You can use the same syntax to align images. Together with the option to resize them using `.prose-img:w-8` (where 8 stands for a size unit in [Tailwind](https://tailwindcss.com/docs/width)), you can create a custom letter header for your company. The class `.prose-img:mb-2` lets you specify the space below an image (margin bottom, as explained [here](https://tailwindcss.com/docs/margin)).
 
 ![Logo](/favicon.svg)
 **Paperloop, Inc.**
 John Doe
 Metropolis, CA 90210
 {.text-right .prose-img:w-8 .prose-img:mb-2}
+
+---
 
 ## 15. Headers and footers
 
@@ -257,6 +269,8 @@ margins:
 Headers and footers may contain placeholders and calculations, filled in with the values you enter, including their fallbacks and format options. A name that is only calculated in the document itself is not available here — write the calculation into the header instead. The bottom center is reserved for the page number. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
 
 Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
+
+---
 
 ## 16. Importing values
 
