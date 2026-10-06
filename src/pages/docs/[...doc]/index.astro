@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DocumentMenu } from "@/components/ui/document-menu";
-import { Eraser, Maximize } from "lucide-react";
+import { ClipboardPaste, Eraser, Maximize } from "lucide-react";
 
 import Layout from "@/components/custom/layout.astro";
 import Particles from "@/components/custom/particles.astro";
@@ -69,6 +69,7 @@ const client = getClientTranslations(locale);
                         {i18n("preview")}
                     </span>
                     <div class="flex gap-2">
+                        <IconButton icon={ClipboardPaste} tooltip="paste"></IconButton>
                         <IconButton icon={Eraser} tooltip="clear"></IconButton>
                         <IconButton icon={Maximize} tooltip="render"></IconButton>
                     </div>
@@ -92,7 +93,7 @@ const client = getClientTranslations(locale);
     import { tags } from "@lezer/highlight";
     import type { SyntaxNode } from "@lezer/common";
     import { getParticles } from "@/utils/particles";
-    import { updateRender } from "@/utils/markdown";
+    import { parseValues, updateRender } from "@/utils/markdown";
     import { debounce } from "@/utils/debounce";
 
     const markdownHighlight = HighlightStyle.define([
@@ -192,6 +193,15 @@ const client = getClientTranslations(locale);
                     id,
                     name: target.value
                 });
+            }
+        });
+
+        // Replaces all values with a JSON object from the clipboard, e.g. one prepared by an agent
+        document.querySelector("button#paste")?.addEventListener("click", async () => {
+            try {
+                updateRender.setValues?.(parseValues(await navigator.clipboard.readText()));
+            } catch (error) {
+                alert(`The clipboard does not contain valid values: ${error instanceof Error ? error.message : error}`);
             }
         });
 

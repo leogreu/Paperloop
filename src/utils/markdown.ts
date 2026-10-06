@@ -409,6 +409,22 @@ const parseFrontmatter = (value: string) => {
     }
 };
 
+// Reads document values from JSON, e.g. as prepared by an agent: a flat object whose numbers and
+// booleans are taken as their text, so {"Net": 1200, "?extended": true} works as well
+export const parseValues = (text: string) => {
+    const input: unknown = JSON.parse(text);
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+        throw new TypeError("Values must be a JSON object");
+    }
+
+    return Object.fromEntries(Object.entries(input).map(([key, value]) => {
+        if (!["string", "number", "boolean"].includes(typeof value)) {
+            throw new TypeError(`Value of "${key}" must be a string, number, or boolean`);
+        }
+        return [key, String(value)];
+    }));
+};
+
 export const updateRender: {
     setValue?: (value: string) => void,
     setValues?: (values: Record<string, string>) => void
