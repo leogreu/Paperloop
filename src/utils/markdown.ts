@@ -290,27 +290,38 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
 export const updateComputed = (root: ParentNode, values: Record<string, string>) => {
     const scope = valueScope(values);
 
-    // Optional toggles are in scope as booleans (requires updateOptional to have run before), while
-    // placeholders of the same name take precedence, as they are already in the scope
+    // A name whose every occurrence sits in an excluded block does not apply to the document, so it
+    // counts as zero, whether entered, defaulted, or calculated; one included occurrence suffices to
+    // count (requires updateOptional to have run before)
+    const included = new Set<string>();
+    const excluded = new Set<string>();
+    for (const element of root.querySelectorAll("content-editable[placeholder]")) {
+        const key = element.getAttribute("placeholder");
+        if (key) (element.closest(".excluded") ? excluded : included).add(key);
+    }
+    const omitted = new Set([...excluded].filter(key => !included.has(key)));
+    for (const key of omitted) scope[key] = 0;
+
+    // Optional toggles are in scope as booleans, while placeholders of the same name take precedence,
+    // as they are already in the scope
     for (const input of root.querySelectorAll<HTMLInputElement>("input.optional-toggle")) {
         scope[input.dataset.optional ?? String()] ??= input.checked;
     }
 
-    // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered,
-    // unless they sit in an excluded optional block (requires the lift pass to have run before)
+    // Optional placeholders (declared via ??) count as zero while empty; defaults count as entered
     for (const element of root.querySelectorAll("content-editable[fallback], content-editable[default]")) {
         const key = element.getAttribute("placeholder") ?? String();
         const preset = element.getAttribute("default");
-        scope[key] ??= preset !== null && values[key] === undefined && !element.closest(".excluded")
-            ? toNumber(preset)
-            : 0;
+        scope[key] ??= preset !== null && values[key] === undefined ? toNumber(preset) : 0;
     }
 
     for (const element of root.querySelectorAll("content-editable[expression]")) {
+        const key = element.getAttribute("placeholder") ?? String();
         let value: string | null = null;
         try {
+            // An omitted calculation is still evaluated for display in its faded block, but counts as zero
             const result = evaluate(element.getAttribute("expression") ?? String(), scope);
-            scope[element.getAttribute("placeholder") ?? String()] = result;
+            if (!omitted.has(key)) scope[key] = result;
             value = renderResult(result);
         } catch {
             // Unresolvable (e.g., empty inputs): drop the value, so the name is shown instead

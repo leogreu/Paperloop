@@ -118,6 +118,8 @@ Tables can be created using pipes (`|`) and dashes (`-`) to separate columns and
 | Row 3    | Data 3   |
 | Row 4    | Data 4   |
 
+Table cells, including those of the header row, can also hold placeholders and calculations. For a line break within a cell, write `<br>`. Please avoid `|` within a cell, as it starts a new one.
+
 ---
 
 ## 10. Placeholders
@@ -186,6 +188,8 @@ Append a format option to a placeholder or calculation to display its value nice
 
 **Example:** Today is [=now():date].
 
+Expressions follow the syntax of [mathjs](https://mathjs.org/docs/expressions/syntax.html): besides `+`, `-`, `*` and `/`, you can use `^` for powers, comparisons like `>` or `==`, and functions like `round(Value, 2)`, `min()`, `max()` or `abs()`.
+
 To avoid repeating these settings, a document can state them once in its frontmatter, so that a plain `:currency`, `:number` or `:date` is enough. Arguments written at an option still take precedence, and each setting may be left out on its own:
 
 ```
@@ -197,7 +201,9 @@ formatting:
 ---
 ```
 
-Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions.
+Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions. To show a result again elsewhere, simply write its name, as in `[Gross:currency]`, which displays it read-only.
+
+While a referenced placeholder without a fallback is still empty, a calculation cannot be resolved and shows its name instead, just like every calculation building on it. Only the chosen side of a condition is calculated, so `[=Storage ? Subjects * 2 : 0]` resolves even while `Subjects` is empty, as long as `Storage` is not filled in.
 
 For optional placeholders, append `??` with a fallback value that is shown and printed while the placeholder is empty — but counts as zero in calculations until you actually fill in the field. With `??=` the value is considered in calculations right away instead. Define the fallback at the first occurrence of a placeholder — it then applies to all of them. Leaving the fallback out entirely, as in `[Note??]`, marks a purely optional field: it shows its name while you edit, but prints nothing at all instead of an empty box to fill in.
 
@@ -210,6 +216,8 @@ Expressions can also result in text rather than a number. Wrap it in straight qu
 **Example:** [Intro=Amount ? "" : "Optional: "][Amount??500:currency]
 
 If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. A condition can also reference an optional block by its name, which is true while the block is included. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
+
+Everything within an excluded block counts as zero in calculations: entered values, fallbacks, and results alike. This way, totals always match the printed document, and a value you entered counts again as soon as you include its block. A name that also occurs outside of excluded blocks counts as usual, e.g. a price shown in two alternative rows.
 
 ---
 
@@ -230,7 +238,7 @@ To add up a repeated column, write its name followed by `_*`: `sum(Fee_*)` adds 
 
 **Total:** [Total=sum(Fee_*):currency]
 
-Like in headers and footers, the bounds can only reference placeholders you fill in, not names that are calculated in the document. A single marker repeats up to 100 rows, and rows that are removed by lowering a bound keep their entered values, should you raise it again.
+Like in headers and footers, the bounds can only reference placeholders you fill in, not names that are calculated in the document, and they are resolved regardless of optional blocks. A single marker repeats up to 100 rows, and rows that are removed by lowering a bound keep their entered values, should you raise it again.
 
 ---
 
@@ -289,9 +297,9 @@ Instead of filling in a document field by field, you can also fill it in at once
 }
 ```
 
-The object is flat, with the names of your placeholders as keys. An optional block is included with `"?name": true` and excluded with `false`. Fields in repeated rows are addressed by their full name, like `Fee_2`. Calculated names are left out, as they are always calculated anew.
+The object is flat, with the names of your placeholders as keys. An optional block is included with `"?name": true` and excluded with `false`. Blocks that always follow their expression (a single `=`) cannot be set this way. Fields in repeated rows are addressed by their full name, like `Fee_2`. Calculated names are left out, as they are always calculated anew.
 
-Values are entered raw, just like you would type them into a field: numbers without thousands separators, currency symbols or units (`1200.5` or `"1200,5"`, but not `"1.200,50 €"`), and dates as `"2026-10-06"`. The format options take care of displaying them nicely.
+Values are entered raw, just like you would type them into a field: numbers without thousands separators, currency symbols or units (`1200.5` or `"1200,5"`, but not `"1.200,50 €"`), and dates as `"2026-10-06"`. The format options take care of displaying them nicely. A line break within a value, as in a multi-line address, is written as `\n`, e.g. `"Address": "Main Street 1\n12345 Springfield"`. A value that is only shown, like `?2400`, is written as text: `"?2400"`.
 
 Please note that importing replaces all values of the document. And as values are stored under the names of their placeholders, renaming a placeholder in the document leaves its previous value behind.
 

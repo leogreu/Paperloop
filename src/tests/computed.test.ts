@@ -126,6 +126,49 @@ describe("optional blocks in calculations", () => {
     });
 });
 
+describe("excluded blocks in calculations", () => {
+    test("an entered value counts as zero while its block is excluded", () => {
+        const markdown = `[?extra] [Module] belongs to the block\n\n[Sum=Module+100]`;
+
+        expect(value(renderDocument(markdown, { Module: "500" }), "Sum")).toBe("100");
+        expect(value(renderDocument(markdown, { Module: "500", "?extra": "true" }), "Sum")).toBe("600");
+    });
+
+    test("a calculation counts as zero while its block is excluded", () => {
+        const markdown = `[Price??=100]\n\n[?extra] [Extra=Price*2] belongs to the block\n\n[Sum=Price+Extra]`;
+
+        expect(value(renderDocument(markdown, {}), "Sum")).toBe("100");
+        expect(value(renderDocument(markdown, { "?extra": "true" }), "Sum")).toBe("300");
+    });
+
+    test("an unresolvable calculation in an excluded block counts as zero, too", () => {
+        const markdown = `[?extra] [Extra=Missing*2] belongs to the block\n\n[Sum=Extra+5]`;
+
+        expect(value(renderDocument(markdown, {}), "Sum")).toBe("5");
+    });
+
+    test("a name counts as soon as one of its occurrences is included", () => {
+        const markdown = `[?a] A: [Fee??=1200]\n\n[?b] B: [Fee]\n\n[Sum=Fee+0]`;
+
+        expect(value(renderDocument(markdown, { "?b": "true" }), "Sum")).toBe("1200");
+        expect(value(renderDocument(markdown, { "?a": "true" }), "Sum")).toBe("1200");
+        expect(value(renderDocument(markdown, {}), "Sum")).toBe("0");
+    });
+
+    test("a name outside of any block always counts", () => {
+        const markdown = `[Fee]\n\n[?extra] Again: [Fee]\n\n[Sum=Fee+0]`;
+
+        expect(value(renderDocument(markdown, { Fee: "50" }), "Sum")).toBe("50");
+    });
+
+    test("an excluded section omits the names within", () => {
+        const markdown = `## [?extra] Extra\n\n| Item | Price |\n|---|---|\n| Setup | [Setup??=900] |\n\n## Total\n\n[Sum=Setup+100]`;
+
+        expect(value(renderDocument(markdown, {}), "Sum")).toBe("100");
+        expect(value(renderDocument(markdown, { "?extra": "true" }), "Sum")).toBe("1000");
+    });
+});
+
 describe("repeated names", () => {
     test("every occurrence of a calculated name shows the result", () => {
         const root = renderDocument(`[A] [B] [Result=A+B]\n\n[Result]`, { A: "1", B: "2" });
