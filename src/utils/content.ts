@@ -11,6 +11,6 @@ export const createGettingStarted = async (userId: string) => {
         user: userId,
         version: 1,
         name: "#Paperloop Getting started",
-        markdown: markdown.body
+        markdown: markdown?.body
     })
 };

@@ -18,11 +18,12 @@ import Layout from "@/components/custom/layout.astro";
 import GoogleIcon from "@/icons/brands/google.svg?raw";
 import { getPreferredLocale, getTranslations } from "@/utils/i18n";
 
-// For authenticated users, show docs
-if (Astro.locals.user) return Astro.redirect("/docs");
-
+// Checked first, as the user is still set while logging out
 const result = Astro.getActionResult(actions.auth);
 if (result?.data) return Astro.redirect(result.data);
+
+// For authenticated users, show docs
+if (Astro.locals.user) return Astro.redirect("/docs");
 
 const type = Astro.url.searchParams.get("type") || "login";
 const locale = getPreferredLocale(Astro.request.headers);

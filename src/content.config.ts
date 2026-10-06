@@ -1,11 +1,12 @@
 import { defineCollection, z } from "astro:content";
+import { glob } from "astro/loaders";
 
 export const collections = {
     translations: defineCollection({
-        type: "data",
+        loader: glob({ pattern: "*.json", base: "./src/content/translations" }),
         schema: z.record(z.string())
     }),
     markdown: defineCollection({
-        type: "content"
+        loader: glob({ pattern: "*.md", base: "./src/content/markdown" })
     })
 };
