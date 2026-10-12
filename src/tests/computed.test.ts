@@ -105,6 +105,40 @@ describe("optional placeholders in calculations", () => {
     });
 });
 
+describe("optional()", () => {
+    const sum = (values: Record<string, string>, markdown = `[Price??600] [Sum=optional(Price)]`) =>
+        value(renderDocument(markdown, values), "Sum");
+
+    test("counts a fallback or an entry starting with ?, but not a regular entry", () => {
+        expect(sum({})).toBe("600");
+        expect(sum({ Price: "" })).toBe("600");
+        expect(sum({ Price: "?2500" })).toBe("2500");
+        expect(sum({ Price: "2500" })).toBe("0");
+    });
+
+    test("counts a ??= default as zero, as it already counts regularly", () => {
+        expect(sum({}, `[Price??=600] [Sum=optional(Price)]`)).toBe("0");
+    });
+
+    test("counts an empty field without a fallback as zero, so the calculation still resolves", () => {
+        expect(sum({}, `[Price] [Sum=optional(Price) + 5]`)).toBe("5");
+    });
+
+    test("counts zero within an excluded block", () => {
+        const markdown = `[?extra] [Price??600]\n\n[Sum=optional(Price)]`;
+
+        expect(sum({}, markdown)).toBe("0");
+        expect(sum({ "?extra": "true" }, markdown)).toBe("600");
+    });
+
+    test("never counts a price twice next to the regular total", () => {
+        const markdown = `[A??1200] [B??2500] [Net=A+B] [Sum=Net + optional(A) + optional(B)]`;
+
+        expect(sum({}, markdown)).toBe("3700");
+        expect(sum({ A: "1200" }, markdown)).toBe("3700");
+    });
+});
+
 describe("optional blocks in calculations", () => {
     test("a toggle is in scope as a boolean", () => {
         const markdown = `[?Optional] Optional\n\nChosen: [=Optional ? "Yes" : "No"]`;
