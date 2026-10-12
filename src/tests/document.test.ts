@@ -67,6 +67,14 @@ describe("the getting-started document", () => {
         expect(variable?.hasAttribute("readonly")).toBe(false);
     });
 
+    test("counts the optional price example only while it is optional", () => {
+        const example = (values: Record<string, string>) => [...renderDocument(markdown, values).querySelectorAll("content-editable[expression]")]
+            .find(element => element.getAttribute("expression") === "optional(Variable)")?.getAttribute("value");
+
+        expect(example({})).toBe("1200");
+        expect(example({ Variable: "2000" })).toBe("0");
+    });
+
     test("computes the gross price example from the net price", () => {
         expect(placeholder(renderDocument(markdown, { Net: "1000" }), "Gross")?.getAttribute("value")).toBe("1190");
     });

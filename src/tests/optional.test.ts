@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { markdownToHTML, repetitionInputs } from "@/utils/markdown";
 import { blocks, renderDocument, toggle } from "./helpers";
 
 const state = (root: ParentNode, name: string) => {
@@ -70,6 +71,22 @@ describe("derived states", () => {
         expect(state(renderDocument(markdown, {}), "c").checked).toBe(true);
         expect(state(renderDocument(markdown, { "?a": "true" }), "b").checked).toBe(false);
         expect(state(renderDocument(markdown, { "?a": "true" }), "c").checked).toBe(false);
+    });
+});
+
+describe("optional() in expressions", () => {
+    const markdown = `## [?extras=optional(A) + optional(B) > 0] Optional services\n\n[A??] [B??]\n`;
+
+    test("includes a section while it holds an optional value, regardless of the section itself", () => {
+        expect(state(renderDocument(markdown, {}), "extras").excluded).toBe(true);
+        expect(state(renderDocument(markdown, { B: "?2500" }), "extras").excluded).toBe(false);
+        expect(state(renderDocument(markdown, { B: "2500" }), "extras").excluded).toBe(true);
+    });
+
+    test("renders the document anew when a referenced value is entered", () => {
+        markdownToHTML(markdown, {});
+
+        expect(repetitionInputs.has("B")).toBe(true);
     });
 });
 

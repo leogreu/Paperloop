@@ -56,7 +56,7 @@ const renderEditable = (attributes: string | undefined, properties: Record<strin
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// The names a repetition bound references; entering one of them changes the document structure,
+// The names a repetition bound or block condition references; entering one changes the document structure,
 // so the document has to be rendered anew rather than only recalculated
 export const repetitionInputs = new Set<string>();
 
@@ -127,6 +127,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             // An expression applies to every occurrence of its toggle, defined at the first one
             if (expression) expressions[key] = [assign, expression];
             else [assign, expression] = expressions[key] ?? [assign, expression];
+            for (const name of expression?.match(/[\p{L}_][\p{L}\p{N}_]*/gu) ?? []) repetitionInputs.add(name);
 
             const attributes = renderAttributes({
                 class: "optional-toggle not-prose",
@@ -196,6 +197,17 @@ const toNumber = (value: string) => {
 const displayOnly = /^\s*\?/;
 export const displayValue = (value: string) => value.replace(displayOnly, String());
 
+// mathjs passes functions values rather than names, so optional(Name) is evaluated as optional("Name")
+const quoteOptional = (expression: string) => expression.replace(/optional\(\s*([\p{L}\p{N}_]+)\s*\)/gu, `optional("$1")`);
+
+// optional(Name) counts a placeholder only while it is optional: with an entry starting with ?, or while
+// empty with its ?? fallback (read like an entry "?fallback"); entered regularly, it counts as zero
+const optionalValue = (root: ParentNode, values: Record<string, string>) => (key: string) => {
+    const fallback = root.querySelector(`[placeholder="${key}"][fallback]`)?.getAttribute("fallback") ?? String();
+    const value = values[key]?.trim() ? values[key] : `?${fallback}`;
+    return displayOnly.test(value) ? toNumber(displayValue(value)) || 0 : 0;
+};
+
 // The base scope shared by calculations: the document values as numbers, plus the now() function,
 // which returns the current instant as a full ISO timestamp (the :date suffix renders it for the reader)
 const valueScope = (values: Record<string, string>) => {
@@ -239,7 +251,8 @@ export const applyFormat = (value: unknown, expression: string) => {
 // and lifts every toggle state to the block it governs; must run before updateComputed and
 // updateNumbering, which read the resulting classes
 export const updateOptional = (root: ParentNode, values: Record<string, string>) => {
-    const scope: Record<string, boolean> = {};
+    // Resolved before any block is excluded, so optional() reads values regardless of blocks
+    const scope: Record<string, unknown> = { optional: optionalValue(root, values) };
     const derived: HTMLInputElement[] = [];
 
     // A = expression (which renders as disabled) always applies, a ??= one only until set explicitly;
@@ -254,7 +267,7 @@ export const updateOptional = (root: ParentNode, values: Record<string, string>)
     for (const input of derived) {
         let state = false;
         try {
-            state = Boolean(evaluate(input.dataset.expression ?? String(), scope));
+            state = Boolean(evaluate(quoteOptional(input.dataset.expression ?? String()), scope));
         } catch {
             // Unresolvable (e.g., toggles defined further down): keep excluded
         }
@@ -315,12 +328,15 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
         scope[key] ??= preset !== null && values[key] === undefined ? toNumber(preset) : 0;
     }
 
+    const optional = optionalValue(root, values);
+    scope.optional ??= (key: string) => omitted.has(key) ? 0 : optional(key);
+
     for (const element of root.querySelectorAll("content-editable[expression]")) {
         const key = element.getAttribute("placeholder") ?? String();
         let value: string | null = null;
         try {
             // An omitted calculation is still evaluated for display in its faded block, but counts as zero
-            const result = evaluate(element.getAttribute("expression") ?? String(), scope);
+            const result = evaluate(quoteOptional(element.getAttribute("expression") ?? String()), scope);
             if (!omitted.has(key)) scope[key] = result;
             value = renderResult(result);
         } catch {
