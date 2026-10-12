@@ -310,13 +310,13 @@ Please note that importing replaces all values of the document. And as values ar
 Scripts and AI agents can create documents, too. Click the key button at the top right of your documents to create an API key, which is shown only once. Clicking it again deletes the key, after which you can create a new one.
 
 ```sh
-curl -X POST https://paperloop.io/api/documents \
+curl -X POST https://www.paperloop.io/api/documents \
   -H "Authorization: Bearer pl_..." \
   -H "Content-Type: application/json" \
   -d '{ "name": "#Offers Ada", "markdown": "# Offer\n\n...", "values": { "Name": "Ada", "Net": 1200 } }'
 ```
 
-The response contains the link to the new draft: `{ "url": "https://paperloop.io/docs/..." }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in.
+The response contains the link to the new draft: `{ "url": "https://www.paperloop.io/docs/..." }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in.
 
 ---
 
