@@ -11,6 +11,8 @@ beforeEach(resetFormatting);
 describe("the getting-started document", () => {
     test("renders without leaving literal markers behind", () => {
         const root = renderDocument(markdown, {});
+        // Code merely shows the syntax, so its markers are meant to stay
+        root.querySelectorAll("code").forEach(code => code.remove());
 
         expect(root.textContent).not.toMatch(/\[=|\[\?|\?\?\]/);
     });

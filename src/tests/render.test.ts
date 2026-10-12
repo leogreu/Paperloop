@@ -177,6 +177,23 @@ describe("calculations", () => {
     });
 });
 
+describe("code", () => {
+    test("shows markers in code spans and blocks as they are", () => {
+        const html = markdownToHTML("Write `[?name]` or `[Gross=Net*1.19:currency]`.\n\n```\n---\nmargins:\n  top-center: Offer for [Company]\n---\n```\n", {});
+
+        expect(html).toContain("<code>[?name]</code>");
+        expect(html).toContain("<code>[Gross=Net*1.19:currency]</code>");
+        expect(html).toContain("top-center: Offer for [Company]");
+        expect(html).not.toMatch(/content-editable|<input/);
+    });
+
+    test("leaves placeholders between code spans and blocks intact", () => {
+        const html = markdownToHTML("Use triple backticks (```).\n\n```js\nconst a = 1;\n```\n\nHello, [Name]!", {});
+
+        expect(html).toContain(`placeholder="Name"`);
+    });
+});
+
 describe("malformed input", () => {
     test("an unknown suffix stays literal text", () => {
         expect(markdownToHTML(`[Preis:netto]`, {})).toContain("[Preis:netto]");

@@ -113,8 +113,11 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
     formatting = parseFrontmatter(value)?.formatting ?? {};
     repetitionInputs.clear();
 
-    // Must run first, as every later pass relies on the repeated lines being plain markdown
-    const expanded = expandRepetitions(value.replace(frontmatter, String()), values);
+    // Must run first, as every later pass relies on the repeated lines being plain markdown; code spans
+    // and blocks merely show the syntax, so they are set aside until all passes have run
+    const code: string[] = [];
+    const expanded = expandRepetitions(value.replace(frontmatter, String()), values)
+        .replace(/^```[\s\S]*?^```|`[^`\n]*`/gm, match => `\u0000${code.push(match) - 1}\u0000`);
     const names = [...new Set([...expanded.matchAll(/\[([^\s=?:\]]+)/g)].map(([, name]) => name))];
 
     // TODO: Evaluate whether to create markdown-it plugin
@@ -163,7 +166,7 @@ export const markdownToHTML = (value: string, values: Record<string, string>) =>
             }, "underline");
         });
 
-    return md.render(replaced);
+    return md.render(replaced.replace(/\u0000(\d+)\u0000/g, (_, index) => code[Number(index)]));
 };
 
 // Defaults for the format suffixes, so a document states its currency and language only once;
@@ -201,11 +204,11 @@ export const displayValue = (value: string) => value.replace(displayOnly, String
 const quoteOptional = (expression: string) => expression.replace(/optional\(\s*([\p{L}\p{N}_]+)\s*\)/gu, `optional("$1")`);
 
 // optional(Name) counts a placeholder only while it is optional: with an entry starting with ?, or while
-// empty with its ?? fallback (read like an entry "?fallback"); entered regularly, it counts as zero
-const optionalValue = (root: ParentNode, values: Record<string, string>) => (key: string) => {
+// empty with its ?? fallback (read like an entry "?fallback"); entered regularly or omitted, it counts as zero
+const optionalValue = (root: ParentNode, values: Record<string, string>, omitted = new Set<string>()) => (key: string) => {
     const fallback = root.querySelector(`[placeholder="${key}"][fallback]`)?.getAttribute("fallback") ?? String();
     const value = values[key]?.trim() ? values[key] : `?${fallback}`;
-    return displayOnly.test(value) ? toNumber(displayValue(value)) || 0 : 0;
+    return displayOnly.test(value) && !omitted.has(key) ? toNumber(displayValue(value)) || 0 : 0;
 };
 
 // The base scope shared by calculations: the document values as numbers, plus the now() function,
@@ -328,9 +331,7 @@ export const updateComputed = (root: ParentNode, values: Record<string, string>)
         scope[key] ??= preset !== null && values[key] === undefined ? toNumber(preset) : 0;
     }
 
-    const optional = optionalValue(root, values);
-    scope.optional ??= (key: string) => omitted.has(key) ? 0 : optional(key);
-
+    scope.optional ??= optionalValue(root, values, omitted);
     for (const element of root.querySelectorAll("content-editable[expression]")) {
         const key = element.getAttribute("placeholder") ?? String();
         let value: string | null = null;
