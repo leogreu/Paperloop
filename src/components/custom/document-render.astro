@@ -30,6 +30,14 @@ export interface Props {
             ...Object.fromEntries(new URLSearchParams(location.search))
         };
 
+        // Values in the URL fragment, e.g. from a link returned by the API, are stored once and then
+        // removed from the URL; anchors like #alignment contain no "=" and are thereby left alone
+        if (location.hash.includes("=")) {
+            values = { ...values, ...Object.fromEntries(new URLSearchParams(location.hash.slice(1))) };
+            if (doc) localStorage.setItem(doc, JSON.stringify(values));
+            history.replaceState(history.state, "", location.pathname + location.search);
+        }
+
         // Intial render
         const renderDocument = () => {
             render!.innerHTML = markdownToHTML(value, values);

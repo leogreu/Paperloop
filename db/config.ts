@@ -12,7 +12,16 @@ const Document = defineTable({
     }
 });
 
+// One key per user, stored as a SHA-256 hash, so it is only shown once when created
+const ApiKey = defineTable({
+    columns: {
+        user: column.text({ primaryKey: true }),
+        hash: column.text({ unique: true }),
+        created: column.date()
+    }
+});
+
 // https://astro.build/db/config
 export default defineDb({
-    tables: { Document }
+    tables: { Document, ApiKey }
 });

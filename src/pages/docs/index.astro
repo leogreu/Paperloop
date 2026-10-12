@@ -1,7 +1,9 @@
 ---
 import "@/styles/globals.css";
-import { db, eq, desc, Document } from "astro:db";
+import { db, eq, desc, ApiKey, Document } from "astro:db";
+import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { KeyRound } from "lucide-react";
 
 import Layout from "@/components/custom/layout.astro";
 import Empty from "@/components/custom/empty.astro";
@@ -13,6 +15,10 @@ if (!Astro.locals.user) return Astro.redirect("/auth");
 const docs = await db.select().from(Document)
     .where(eq(Document.user, Astro.locals.user.id))
     .orderBy(desc(Document.updated));
+
+const apiKey = await db.select().from(ApiKey)
+    .where(eq(ApiKey.user, Astro.locals.user.id))
+    .get();
 
 const distinct = docs.filter((doc, index) => {
     return index === docs.findIndex(entry => entry.document === doc.document);
@@ -32,6 +38,19 @@ const tags = distinct.reduce<Record<string, typeof docs>>((result, doc) => {
 ---
 
 <Layout title={i18n("my-documents")} locale={locale}>
+    <Button
+        id="api-key"
+        slot="navbar"
+        size="icon"
+        variant={apiKey ? "secondary" : "outline"}
+        className="h-9 w-9"
+        title={i18n("api-key")}
+        data-active={String(!!apiKey)}
+        data-created={i18n("api-key-created")}
+        data-delete={i18n("api-key-delete")}
+    >
+        <KeyRound strokeWidth="2.25" className="h-4 w-4" />
+    </Button>
     {Object.keys(tags).length
         ? <div class="flex flex-col gap-8">
             {Object.entries(tags).sort().map(([tag, docs]) =>
@@ -73,3 +92,24 @@ const tags = distinct.reduce<Record<string, typeof docs>>((result, doc) => {
         </Empty>
     }
 </Layout>
+
+<script>
+    import { actions } from "astro:actions";
+    import { navigate } from "astro:transitions/client";
+
+    // Creates a key and shows it once, or deletes the existing one, so a new one can be created
+    document.addEventListener("astro:page-load", () => {
+        const button = document.querySelector<HTMLButtonElement>("button#api-key");
+        button?.addEventListener("click", async () => {
+            if (button.dataset.active === "true") {
+                if (!confirm(button.dataset.delete)) return;
+                await actions.deleteApiKey();
+            } else {
+                const { data, error } = await actions.createApiKey();
+                if (error) return;
+                prompt(button.dataset.created, data);
+            }
+            navigate(location.pathname);
+        });
+    });
+</script>
