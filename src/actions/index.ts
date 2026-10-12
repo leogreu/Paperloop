@@ -1,8 +1,9 @@
 import { defineAction, ActionError } from "astro:actions";
-import { and, db, eq, Document } from "astro:db";
+import { and, db, eq, ApiKey, Document } from "astro:db";
 import { z } from "astro:schema";
 import { supabase } from "@/lib/supabase";
 import { createGettingStarted } from "@/utils/content";
+import { generateApiKey, hashApiKey } from "@/utils/api-key";
 
 export const server = {
     auth: defineAction({
@@ -145,6 +146,28 @@ export const server = {
                 and(eq(Document.document, document), eq(Document.user, user.id))
             );
             return "/docs";
+        }
+    }),
+    createApiKey: defineAction({
+        accept: "json",
+        handler: async (_, { locals: { user }}) => {
+            if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+
+            const key = generateApiKey();
+            const values = { hash: await hashApiKey(key), created: new Date() };
+            await db.insert(ApiKey)
+                .values({ user: user.id, ...values })
+                .onConflictDoUpdate({ target: ApiKey.user, set: values });
+
+            return key;
+        }
+    }),
+    deleteApiKey: defineAction({
+        accept: "json",
+        handler: async (_, { locals: { user }}) => {
+            if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+
+            await db.delete(ApiKey).where(eq(ApiKey.user, user.id));
         }
     })
 }
