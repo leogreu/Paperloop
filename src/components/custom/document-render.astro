@@ -216,6 +216,11 @@ const replace = {
             break-after: avoid;
         }
 
+        /* Tables move to the next page as a whole if possible; longer ones still break between rows only */
+        .prose :is(table, tr) {
+            break-inside: avoid;
+        }
+
         .optional-toggle {
             display: none;
         }
