@@ -1,6 +1,10 @@
+import { writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
+import { printPdf } from "./pdf";
 
 // The key is only ever sent to Paperloop, and the URL may point to a development server instead
 const { PAPERLOOP_API_KEY, PAPERLOOP_URL = "https://www.paperloop.io" } = process.env;
@@ -15,26 +19,29 @@ const request = async (path: string, init?: RequestInit) => {
     return response;
 };
 
-const api = async (path: string, method = "GET", body?: object) => {
+const authorization = () => {
     if (!PAPERLOOP_API_KEY) {
         throw new Error("PAPERLOOP_API_KEY is not set. Ask the user to create an API key with the key button at the "
             + "top right of their documents in Paperloop, and to add it as PAPERLOOP_API_KEY to the env of the "
             + "paperloop server in the MCP configuration of their client. The key must never be shared in the chat.");
     }
+    return `Bearer ${PAPERLOOP_API_KEY}`;
+};
 
+const api = async (path: string, method = "GET", body?: object) => {
     const response = await request(path, {
         method,
-        headers: { "Authorization": `Bearer ${PAPERLOOP_API_KEY}`, "Content-Type": "application/json" },
+        headers: { "Authorization": authorization(), "Content-Type": "application/json" },
         body: body && JSON.stringify(body)
     });
     return response.json();
 };
 
 // Only the ID is taken from a link, so that the key is never sent to the host it names
-const documentPath = (url: string) => {
+const documentId = (url: string) => {
     const [, id] = url.match(/\/docs\/([\w-]+)/) ?? [];
     if (!id) throw new Error(`${url} is not a link to a Paperloop document`);
-    return `/api/documents/${id}`;
+    return id;
 };
 
 const text = (value: string) => ({ content: [{ type: "text" as const, text: value }] });
@@ -75,7 +82,7 @@ serveStdio(() => {
             + "user may have edited it in Paperloop since.",
         inputSchema: z.object({ url }),
         annotations: { readOnlyHint: true }
-    }, async ({ url }) => text(JSON.stringify(await api(documentPath(url)))));
+    }, async ({ url }) => text(JSON.stringify(await api(`/api/documents/${documentId(url)}`))));
 
     server.registerTool("update_document", {
         title: "Update a Paperloop document",
@@ -85,7 +92,32 @@ serveStdio(() => {
             + "others. Published versions cannot be changed, except for their values, which all versions of a "
             + "document share. A document that is still open in the browser shows the changes once reloaded.",
         inputSchema: z.object({ url, name: name.optional(), markdown: markdown.optional(), values })
-    }, async ({ url, ...input }) => text((await api(documentPath(url), "PATCH", input)).url));
+    }, async ({ url, ...input }) => text((await api(`/api/documents/${documentId(url)}`, "PATCH", input)).url));
+
+    server.registerTool("export_pdf", {
+        title: "Export Paperloop documents as a PDF",
+        description: "Prints documents of the user's Paperloop account with Google Chrome on this computer, just like "
+            + "its print dialog does, with their values, headers, footers, and page numbers, and merges them in the "
+            + "given order into one PDF file, e.g. to put together a contract from several documents or to check the "
+            + "final result. Returns the path of the file, and never overwrites an existing one. Requires Google "
+            + "Chrome to be installed.",
+        inputSchema: z.object({
+            urls: z.array(z.string()).min(1).describe("Links of the documents, in the order they should appear in the PDF."),
+            file: z.string().describe("Name of the PDF file to save in the user's Downloads folder, e.g. \"Contract Ada.pdf\", or an absolute path.")
+        }),
+        annotations: { destructiveHint: false }
+    }, async ({ urls, file }) => {
+        const pdf = await printPdf(
+            urls.map(url => new URL(`/docs/${documentId(url)}/render`, PAPERLOOP_URL).href),
+            new URL(PAPERLOOP_URL).origin,
+            authorization()
+        );
+
+        const path = resolve(homedir(), "Downloads", file);
+        await writeFile(path, await pdf.save(), { flag: "wx" });
+        const pages = pdf.getPageCount();
+        return text(`Saved the PDF with ${pages} ${pages === 1 ? "page" : "pages"} to ${path}`);
+    });
 
     return server;
 });

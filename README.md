@@ -14,7 +14,7 @@ Paperloop separates the static from the dynamic parts of your documents. Write a
 - **Headers and footers** — Define print headers and footers via frontmatter at the top of a document, rendered with CSS page-margin boxes including page numbers. They may contain placeholders and calculations, which are filled in with the same values as the document itself.
 - **Value import** — Paste a JSON object of values via the clipboard button in the preview to fill in a document at once, e.g. one prepared by an AI agent. The [getting started guide](src/content/markdown/getting-started.md) describes the full syntax and the value format, and can be handed to an agent as is.
 - **API** — Create drafts from scripts or AI agents with a single `POST /api/documents`, authenticated by an API key from the documents overview. The response links to the new draft, and values passed along are stored with it. `GET` and `PATCH /api/documents/{id}` read and update a draft, and `GET /api/getting-started` serves the guide as Markdown.
-- **MCP server** — Let AI agents like Claude or Codex create and update documents directly via a small local server in [mcp/](mcp/), which works with any MCP client, reads the current guide and keeps the API key out of the chat. See [MCP server](#mcp-server) for how to set it up.
+- **MCP server** — Let AI agents like Claude or Codex create, update, and export documents as one PDF directly via a small local server in [mcp/](mcp/), which works with any MCP client, reads the current guide and keeps the API key out of the chat. See [MCP server](#mcp-server) for how to set it up.
 - **Versions and diffs** — Publish read-only versions of a document and browse the full history side by side, with word-level diff highlighting between versions.
 
 ## Development
@@ -51,6 +51,8 @@ Then add the server to the MCP configuration of your client, with the full path 
 ```
 
 Should the client not find Node.js, replace `node` with the full path that `which node` prints in a terminal. To point the server to the development server instead, add `"PAPERLOOP_URL": "http://localhost:4321"` to its environment.
+
+To export documents as one PDF, the server prints their rendered view with the locally installed Google Chrome, just like its print dialog does, and saves the file in the Downloads folder. It requires Node.js 22 or newer, and for Chrome in another location, add its path as `CHROME_PATH` to the environment. For printing, the rendered view also accepts the API key, which the server only sends to Paperloop itself.
 
 ## License
 
