@@ -321,7 +321,7 @@ curl -X POST https://www.paperloop.io/api/documents \
   -d '{ "name": "#Offers Ada", "markdown": "# Offer\n\n...", "values": { "Name": "Ada", "Net": 1200 } }'
 ```
 
-The response contains the link to the new draft: `{ "url": "https://www.paperloop.io/docs/..." }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in.
+The response contains the link to the new draft, which opens it rendered and ready to print: `{ "url": "https://www.paperloop.io/docs/.../render" }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in.
 
 ---
 

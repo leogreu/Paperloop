@@ -9,8 +9,8 @@ const Input = z.object({
     values: z.record(z.union([z.string(), z.number(), z.boolean()])).optional()
 });
 
-// Creates a draft for the owner of the API key and returns its URL, with the values in the fragment,
-// as it is never sent to the server and thereby not subject to its URL length limit
+// Creates a draft for the owner of the API key and returns the URL of its rendered view, with the values
+// in the fragment, as it is never sent to the server and thereby not subject to its URL length limit
 export const POST: APIRoute = async ({ request, url }) => {
     const [scheme, key] = request.headers.get("authorization")?.split(" ") ?? [];
     const apiKey = scheme === "Bearer" && key
@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     ).toString();
 
     return Response.json(
-        { url: `${url.origin}/docs/${document.id}${fragment && `#${fragment}`}` },
+        { url: `${url.origin}/docs/${document.id}/render${fragment && `#${fragment}`}` },
         { status: 201 }
     );
 };
