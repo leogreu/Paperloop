@@ -44,6 +44,9 @@ const documentId = (url: string) => {
     return id;
 };
 
+// A local path, relative to the given folder in the home folder unless absolute, with ~ for the home folder as in a shell
+const localPath = (path: string, ...folder: string[]) => resolve(homedir(), ...folder, path.replace(/^~(?=[/\\]|$)/, homedir()));
+
 // Takes the markdown from a local file instead, so that a long template need not pass through the chat; only
 // Markdown files can be read, so that no other one, e.g. a configuration with the key, ends up in a document
 const readMarkdown = async <T extends { markdown?: string, markdown_file?: string }>(input: T) => {
@@ -52,7 +55,7 @@ const readMarkdown = async <T extends { markdown?: string, markdown_file?: strin
     if (input.markdown !== undefined) throw new Error("Pass either markdown or markdown_file, not both");
     if (!/\.md$/i.test(markdown_file)) throw new Error(`${markdown_file} is not a Markdown file ending in .md`);
 
-    const path = resolve(homedir(), markdown_file);
+    const path = localPath(markdown_file);
     const markdown = await readFile(path, "utf8").catch(() => {
         throw new Error(`${path} could not be read. The path has to be the one on the computer running this `
             + "server, so ask the user for it if yours may differ, e.g. in a sandbox.");
@@ -165,9 +168,13 @@ serveStdio(() => {
             authorization()
         );
 
-        const path = resolve(homedir(), "Downloads", file);
+        const path = localPath(file, "Downloads");
         await mkdir(dirname(path), { recursive: true });
-        await writeFile(path, await pdf.save(), { flag: overwrite ? "w" : "wx" });
+        await writeFile(path, await pdf.save(), { flag: overwrite ? "w" : "wx" }).catch(error => {
+            throw error.code === "EEXIST"
+                ? new Error(`${path} already exists, so choose another name, or set overwrite to true to replace it`)
+                : error;
+        });
 
         // The title of a page is the name of its document, followed by the one of Paperloop
         const pages = pdf.getPageCount();
