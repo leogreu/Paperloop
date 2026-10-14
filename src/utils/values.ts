@@ -1,11 +1,9 @@
 import { db, eq, sql, DocumentValues } from "astro:db";
 
-export type Values = Record<string, string>;
-
 // The values of a document, shared by all of its versions
 export const getValues = async (document: string) => {
     const entry = await db.select().from(DocumentValues).where(eq(DocumentValues.document, document)).get();
-    return (entry?.values ?? {}) as Values;
+    return (entry?.values ?? {}) as Record<string, string>;
 };
 
 // Merges changes into the values of a document as a JSON merge patch, so that null removes a key, and

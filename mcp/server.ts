@@ -96,13 +96,13 @@ serveStdio(() => {
 
     server.registerTool("export_pdf", {
         title: "Export Paperloop documents as a PDF",
-        description: "Prints documents of the user's Paperloop account with Google Chrome on this computer, just like "
-            + "its print dialog does, with their values, headers, footers, and page numbers, and merges them in the "
-            + "given order into one PDF file, e.g. to put together a contract from several documents or to check the "
-            + "final result. Returns the path of the file, and never overwrites an existing one. Requires Google "
-            + "Chrome to be installed.",
+        description: "Prints one or more documents of the user's Paperloop account with Google Chrome on this "
+            + "computer, just like its print dialog does, with their values, headers, footers, and page numbers, and "
+            + "merges them in the given order into one PDF file, e.g. to check the final result of a document or to "
+            + "put together a contract from several ones. Returns the path of the file, and never overwrites an "
+            + "existing one. Requires Google Chrome to be installed.",
         inputSchema: z.object({
-            urls: z.array(z.string()).min(1).describe("Links of the documents, in the order they should appear in the PDF."),
+            urls: z.array(z.string()).min(1).describe("Links of the documents, in the order they should appear in the PDF, or a single link for just one document."),
             file: z.string().describe("Name of the PDF file to save in the user's Downloads folder, e.g. \"Contract Ada.pdf\", or an absolute path.")
         }),
         annotations: { destructiveHint: false }
