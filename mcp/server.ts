@@ -46,7 +46,7 @@ serveStdio(() => {
         if (!PAPERLOOP_API_KEY) {
             throw new Error("PAPERLOOP_API_KEY is not set. Ask the user to create an API key with the key button at the "
                 + "top right of their documents in Paperloop, and to add it as PAPERLOOP_API_KEY to the env of the "
-                + "paperloop server in the configuration of the Claude app. The key must never be shared in the chat.");
+                + "paperloop server in the MCP configuration of their client. The key must never be shared in the chat.");
         }
 
         const response = await request("/api/documents", {
