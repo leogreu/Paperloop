@@ -12,6 +12,7 @@ import Particles from "@/components/custom/particles.astro";
 import DocumentHeader from "@/components/custom/document-header.astro";
 import DocumentRender from "@/components/custom/document-render.astro";
 import { getClientTranslations, getPreferredLocale, getTranslations } from "@/utils/i18n";
+import { getValues } from "@/utils/values";
 
 if (!Astro.locals.user) return Astro.redirect("/auth");
 
@@ -22,6 +23,8 @@ const entry = await db.select().from(Document).where(
     and(eq(Document.id, doc), eq(Document.user, Astro.locals.user.id))
 ).get();
 if (!entry) return Astro.redirect("/404");
+
+const values = await getValues(entry.document);
 
 const locale = getPreferredLocale(Astro.request.headers);
 const i18n = getTranslations(locale);
@@ -76,7 +79,7 @@ const client = getClientTranslations(locale);
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <DocumentRender doc={entry.document} value={entry.markdown}></DocumentRender>
+                <DocumentRender doc={entry.document} value={entry.markdown} values={values}></DocumentRender>
             </CardContent>
         </Card>
     </div>

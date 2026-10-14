@@ -108,7 +108,7 @@ Placeholders with the same name share their value automatically.
 
 **Example:** Thank you for reading this, [Name].
 
-The values you enter are saved per document in your browser. They are not synced, so they will not show up in another browser or on another device.
+The values you enter are saved with the document, so they show up in every browser and on every device, and are shared by all of its versions.
 
 ---
 
@@ -295,9 +295,9 @@ curl -X POST https://www.paperloop.io/api/documents \
   -d '{ "name": "#Offers Ada", "markdown": "# Offer\n\n...", "values": { "Name": "Ada", "Net": 1200 } }'
 ```
 
-The response contains the link to the new draft, which opens it rendered and ready to print: `{ "url": "https://www.paperloop.io/docs/.../render" }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in. Should you open the link again after changing some of them, you are asked whether to replace your changes.
+The response contains the link to the new draft, which opens it rendered and ready to print: `{ "url": "https://www.paperloop.io/docs/.../render" }`. The values are optional, follow the format described above, and are stored along with the document.
 
-To change a draft later on, send only what changes to its own address, with the ID from its link. As the markdown replaces the current one as a whole, read it first with a `GET` to the same address, which returns the name and the markdown. Passing only values changes nothing, but returns a new link that fills them in, with the values encoded correctly, unlike in a link edited by hand.
+To change a draft later on, send only what changes to its own address, with the ID from its link. The markdown replaces the current one as a whole, while values only replace the keys they contain, and `null` removes one, e.g. to let an optional block follow its expression again. So read the current state first with a `GET` to the same address, which returns the name, the markdown, and the values.
 
 ```sh
 curl https://www.paperloop.io/api/documents/... \
@@ -309,13 +309,15 @@ curl -X PATCH https://www.paperloop.io/api/documents/... \
   -d '{ "markdown": "# Offer\n\n...", "values": { "Net": 1500 } }'
 ```
 
-Published versions cannot be changed this way, except for their values. And should the draft still be open in the editor, reload it before editing on, as it would otherwise save its previous content again.
+To find documents, a `GET` to `/api/documents?query=...` lists those whose name contains every word of the query, in any order and case, with their links. An empty query lists all of them.
+
+Published versions cannot be changed this way, except for their values, which all versions share. And should the document still be open, reload it to see the changes, and before editing on, as the editor would otherwise save its previous content again.
 
 ---
 
 ## 18. Connecting AI agents
 
-AI agents like Claude or Codex can create and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with.
+AI agents like Claude or Codex can find, create, and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. It can also save several documents as one PDF, printed with Google Chrome on your computer, e.g. to put together a contract.
 
 ---
 

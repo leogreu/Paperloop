@@ -21,7 +21,16 @@ const ApiKey = defineTable({
     }
 });
 
+// The values of a document, shared by all of its versions, so that a new version keeps them
+const DocumentValues = defineTable({
+    columns: {
+        document: column.text({ primaryKey: true }),
+        user: column.text(),
+        values: column.json()
+    }
+});
+
 // https://astro.build/db/config
 export default defineDb({
-    tables: { Document, ApiKey }
+    tables: { Document, ApiKey, DocumentValues }
 });

@@ -6,17 +6,23 @@ import { Printer } from "lucide-react";
 
 import Layout from "@/components/custom/layout.astro";
 import DocumentRender from "@/components/custom/document-render.astro";
+import { getApiUser } from "@/utils/api";
 import { getPreferredLocale, getTranslations } from "@/utils/i18n";
+import { getValues } from "@/utils/values";
 
-if (!Astro.locals.user) return Astro.redirect("/auth");
+// Can also be opened with an API key, so that the MCP server can print it with a local browser
+const user = Astro.locals.user?.id ?? await getApiUser(Astro.request);
+if (!user) return Astro.redirect("/auth");
 
 const { doc } = Astro.params;
 if (!doc) return Astro.redirect("/404");
 
 const entry = await db.select().from(Document).where(
-    and(eq(Document.id, doc), eq(Document.user, Astro.locals.user.id))
+    and(eq(Document.id, doc), eq(Document.user, user))
 ).get();
 if (!entry) return Astro.redirect("/404");
+
+const values = await getValues(entry.document);
 
 const locale = getPreferredLocale(Astro.request.headers);
 const i18n = getTranslations(locale);
@@ -28,7 +34,7 @@ const i18n = getTranslations(locale);
         {i18n("print")}
     </Button>
     <div class="mt-12">
-        <DocumentRender doc={entry.document} value={entry.markdown}></DocumentRender>
+        <DocumentRender doc={entry.document} value={entry.markdown} values={values}></DocumentRender>
     </div>
 </Layout>
 

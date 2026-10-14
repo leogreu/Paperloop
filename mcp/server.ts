@@ -1,6 +1,10 @@
+import { writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
+import { printPdf } from "./pdf";
 
 // The key is only ever sent to Paperloop, and the URL may point to a development server instead
 const { PAPERLOOP_API_KEY, PAPERLOOP_URL = "https://www.paperloop.io" } = process.env;
@@ -15,35 +19,38 @@ const request = async (path: string, init?: RequestInit) => {
     return response;
 };
 
-const api = async (path: string, method = "GET", body?: object) => {
+const authorization = () => {
     if (!PAPERLOOP_API_KEY) {
         throw new Error("PAPERLOOP_API_KEY is not set. Ask the user to create an API key with the key button at the "
             + "top right of their documents in Paperloop, and to add it as PAPERLOOP_API_KEY to the env of the "
             + "paperloop server in the MCP configuration of their client. The key must never be shared in the chat.");
     }
+    return `Bearer ${PAPERLOOP_API_KEY}`;
+};
 
+const api = async (path: string, method = "GET", body?: object) => {
     const response = await request(path, {
         method,
-        headers: { "Authorization": `Bearer ${PAPERLOOP_API_KEY}`, "Content-Type": "application/json" },
+        headers: { "Authorization": authorization(), "Content-Type": "application/json" },
         body: body && JSON.stringify(body)
     });
     return response.json();
 };
 
 // Only the ID is taken from a link, so that the key is never sent to the host it names
-const documentPath = (url: string) => {
+const documentId = (url: string) => {
     const [, id] = url.match(/\/docs\/([\w-]+)/) ?? [];
     if (!id) throw new Error(`${url} is not a link to a Paperloop document`);
-    return `/api/documents/${id}`;
+    return id;
 };
 
 const text = (value: string) => ({ content: [{ type: "text" as const, text: value }] });
 
-const url = z.string().describe("Link of the document, as returned by create_document or update_document, or copied from the browser.");
+const url = z.string().describe("Link of the document, as returned by create_document, search_documents, or update_document, or copied from the browser.");
 const name = z.string().describe("Name of the document. A #tag at its start groups it in the user's documents, e.g. \"#Offers Ada\".");
 const markdown = z.string().describe("Content of the document, written in the syntax described in the guide.");
-const values = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional()
-    .describe("Values to fill in, as a flat object keyed by placeholder names, with \"?name\": true or false for optional blocks, as described in the guide's section on importing values.");
+const values = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]).nullable()).optional()
+    .describe("Values to fill in, as a flat object keyed by placeholder names, with \"?name\": true or false for optional blocks, as described in the guide's section on importing values. Null removes a value, e.g. to let an optional block follow its expression again.");
 
 serveStdio(() => {
     const server = new McpServer({ name: "paperloop", version: "1.0.0" });
@@ -60,36 +67,82 @@ serveStdio(() => {
 
     server.registerTool("create_document", {
         title: "Create a Paperloop document",
-        description: "Creates a new draft in the user's Paperloop account and returns its link. Read the guide with "
-            + "get_guide first, as the markdown and the values follow the syntax described there. The values travel "
-            + "within the link and are only filled in when the user opens exactly this link in a browser where they "
-            + "are logged in to Paperloop, so always share the complete link. To change the document later on, use "
-            + "update_document rather than creating another one.",
+        description: "Creates a new draft in the user's Paperloop account, stores its values along with it, and "
+            + "returns the link to share with the user. Read the guide with get_guide first, as the markdown and the "
+            + "values follow the syntax described there. To change the document later on, use update_document "
+            + "rather than creating another one.",
         inputSchema: z.object({ name, markdown, values }),
         annotations: { destructiveHint: false }
     }, async input => text((await api("/api/documents", "POST", input)).url));
 
+    server.registerTool("search_documents", {
+        title: "Search Paperloop documents",
+        description: "Finds documents in the user's Paperloop account by their name, which often starts with a #tag "
+            + "grouping them, e.g. to collect the documents of a contract. Every word of the query has to appear in "
+            + "the name, in any order and case, and an empty query lists all documents. Returns the name, the link, "
+            + "the version (null for a draft, whose markdown can be changed), and the last update of the latest "
+            + "draft or version of each document as JSON, most recently updated first. Use the links with the other "
+            + "tools.",
+        inputSchema: z.object({
+            query: z.string().default(String()).describe("Words to find in the names, e.g. \"#Contracts ACME\".")
+        }),
+        annotations: { readOnlyHint: true }
+    }, async ({ query }) => text(JSON.stringify(await api(`/api/documents?${new URLSearchParams({ query })}`))));
+
     server.registerTool("get_document", {
         title: "Read a Paperloop document",
-        description: "Returns the name, the current markdown, and the link of a document in the user's Paperloop "
-            + "account as JSON. Read it right before changing the markdown with update_document, as the user may "
-            + "have edited the document in Paperloop since. Its values are only stored in the user's browser and "
-            + "thereby not included.",
-        inputSchema: z.object({ url }),
+        description: "Returns the name, the current markdown, the values, and the link of a document in the user's "
+            + "Paperloop account as JSON. Read it right before changing the document with update_document, as the "
+            + "user may have edited it in Paperloop since. Leave out what you do not need, as a long markdown fills "
+            + "the context: the markdown, e.g. to only reuse the values in another document, or the values to only "
+            + "work on the template.",
+        inputSchema: z.object({
+            url,
+            markdown: z.boolean().default(true).describe("Whether to include the markdown."),
+            values: z.boolean().default(true).describe("Whether to include the values.")
+        }),
         annotations: { readOnlyHint: true }
-    }, async ({ url }) => text(JSON.stringify(await api(documentPath(url)))));
+    }, async ({ url, markdown, values }) => {
+        const document = await api(`/api/documents/${documentId(url)}`);
+        if (!markdown) delete document.markdown;
+        if (!values) delete document.values;
+        return text(JSON.stringify(document));
+    });
 
     server.registerTool("update_document", {
         title: "Update a Paperloop document",
-        description: "Changes a draft in the user's Paperloop account and returns its new link, to be shared like the "
-            + "one of create_document. Pass only what changes. The markdown replaces the current one as a whole, so "
-            + "base it on the one returned by get_document to keep the user's edits. To change only values, pass "
-            + "only values: the document stays as it is, and the new link fills them in once the user opens it. "
-            + "Always use this tool for that rather than building a link yourself, as the values need to be encoded. "
-            + "Before values the user has changed themselves are replaced, they are asked to confirm. Published "
-            + "versions cannot be changed, except for their values.",
+        description: "Changes a document in the user's Paperloop account and returns its link. Pass only what "
+            + "changes. The markdown replaces the current one as a whole, so base it on the one returned by "
+            + "get_document to keep the user's edits. The values only replace the keys they contain and keep all "
+            + "others, and null removes one. Published versions cannot be changed, except for their values, which all versions of a "
+            + "document share. A document that is still open in the browser shows the changes once reloaded.",
         inputSchema: z.object({ url, name: name.optional(), markdown: markdown.optional(), values })
-    }, async ({ url, ...input }) => text((await api(documentPath(url), "PATCH", input)).url));
+    }, async ({ url, ...input }) => text((await api(`/api/documents/${documentId(url)}`, "PATCH", input)).url));
+
+    server.registerTool("export_pdf", {
+        title: "Export Paperloop documents as a PDF",
+        description: "Prints one or more documents of the user's Paperloop account with Google Chrome on this "
+            + "computer, just like its print dialog does, with their values, headers, footers, and page numbers, and "
+            + "merges them in the given order into one PDF file, e.g. to check the final result of a document or to "
+            + "put together a contract from several ones. Returns the path of the file, and never overwrites an "
+            + "existing one. Requires Google Chrome to be installed.",
+        inputSchema: z.object({
+            urls: z.array(z.string()).min(1).describe("Links of the documents, in the order they should appear in the PDF, or a single link for just one document."),
+            file: z.string().describe("Name of the PDF file to save in the user's Downloads folder, e.g. \"Contract Ada.pdf\", or an absolute path.")
+        }),
+        annotations: { destructiveHint: false }
+    }, async ({ urls, file }) => {
+        const pdf = await printPdf(
+            urls.map(url => new URL(`/docs/${documentId(url)}/render`, PAPERLOOP_URL).href),
+            new URL(PAPERLOOP_URL).origin,
+            authorization()
+        );
+
+        const path = resolve(homedir(), "Downloads", file);
+        await writeFile(path, await pdf.save(), { flag: "wx" });
+        const pages = pdf.getPageCount();
+        return text(`Saved the PDF with ${pages} ${pages === 1 ? "page" : "pages"} to ${path}`);
+    });
 
     return server;
 });

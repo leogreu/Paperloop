@@ -1,6 +1,6 @@
 ---
 import "@/styles/globals.css";
-import { db, eq, desc, ApiKey, Document } from "astro:db";
+import { db, eq, ApiKey } from "astro:db";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { KeyRound } from "lucide-react";
@@ -8,21 +8,16 @@ import { KeyRound } from "lucide-react";
 import Layout from "@/components/custom/layout.astro";
 import Empty from "@/components/custom/empty.astro";
 import DocumentHeader from "@/components/custom/document-header.astro";
+import { getDocuments } from "@/utils/documents";
 import { getPreferredLocale, getTranslations } from "@/utils/i18n";
 
 if (!Astro.locals.user) return Astro.redirect("/auth");
 
-const docs = await db.select().from(Document)
-    .where(eq(Document.user, Astro.locals.user.id))
-    .orderBy(desc(Document.updated));
+const docs = await getDocuments(Astro.locals.user.id);
 
 const apiKey = await db.select().from(ApiKey)
     .where(eq(ApiKey.user, Astro.locals.user.id))
     .get();
-
-const distinct = docs.filter((doc, index) => {
-    return index === docs.findIndex(entry => entry.document === doc.document);
-});
 
 // Used to provide a language-specific meta alternate link for SEO
 const locale = getPreferredLocale(Astro.request.headers);
@@ -38,7 +33,7 @@ const deleteApiKey = {
 
 // TODO: Use Object.groupBy() when available
 const defaultTag = i18n("general");
-const tags = distinct.reduce<Record<string, typeof docs>>((result, doc) => {
+const tags = docs.reduce<Record<string, typeof docs>>((result, doc) => {
     const [_, match] = doc.name.match(/#([^\s]+)/) ?? [];
     (result[match ?? defaultTag] ??= []).push(doc);
     return result;
