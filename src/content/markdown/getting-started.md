@@ -309,6 +309,8 @@ curl -X PATCH https://www.paperloop.io/api/documents/... \
   -d '{ "markdown": "# Offer\n\n...", "values": { "Net": 1500 } }'
 ```
 
+For small changes, `edits` replace single passages of the markdown instead of all of it, e.g. `{ "edits": [{ "find": "within 30 days", "replace": "within 14 days" }] }`. Each find text has to appear exactly once in the current markdown, and if one does not, nothing is changed.
+
 To find documents, a `GET` to `/api/documents?query=...` lists those whose name contains every word of the query, in any order and case, with their links. An empty query lists all of them.
 
 Published versions cannot be changed this way, except for their values, which all versions share. And should the document still be open, reload it to see the changes, and before editing on, as the editor would otherwise save its previous content again.
@@ -317,7 +319,7 @@ Published versions cannot be changed this way, except for their values, which al
 
 ## 18. Connecting AI agents
 
-AI agents like Claude or Codex can find, create, and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. It can also save several documents as one PDF, printed with Google Chrome on your computer, e.g. to put together a contract.
+AI agents like Claude or Codex can find, create, and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. It can also take the markdown from a file on your computer, e.g. a template kept in a folder of yours, and save several documents as one PDF, printed with Google Chrome on your computer, e.g. to put together a contract.
 
 ---
 

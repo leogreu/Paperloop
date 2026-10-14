@@ -44,8 +44,9 @@ const connect = async (chrome: ChildProcess, path: string) => {
     return { send, on };
 };
 
-// Prints pages with the local Chrome, just like its print dialog does, and merges them into one PDF;
-// the authorization is only added to page requests to the origin, so that it never reaches other hosts
+// Prints pages with the local Chrome, just like its print dialog does, and merges them into one PDF,
+// along with the pages each one takes up in it; the authorization is only added to page requests to
+// the origin, so that it never reaches other hosts
 export const printPdf = async (urls: string[], origin: string, authorization: string) => {
     const path = process.env.CHROME_PATH ?? chromePaths[process.platform];
     const profile = await mkdtemp(join(tmpdir(), "paperloop-"));
@@ -68,6 +69,7 @@ export const printPdf = async (urls: string[], origin: string, authorization: st
         }).catch(() => {}));
 
         const merged = await PDFDocument.create();
+        const contents: { title: string, first: number, last: number }[] = [];
         for (const url of urls) {
             const loaded = new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => reject(new Error(`${url} did not load`)), 30000);
@@ -83,19 +85,22 @@ export const printPdf = async (urls: string[], origin: string, authorization: st
                     window.onbeforeprint?.();
                     await Promise.all([...document.images].map(image => image.decode().catch(() => {})));
                     await document.fonts.ready;
-                    return location.href;
+                    return { href: location.href, title: document.title };
                 })()`,
                 awaitPromise: true,
                 returnByValue: true
             });
-            if (result.value !== url) throw new Error(`${url} could not be opened, so check the link and the API key`);
+            const { href, title } = result.value;
+            if (href !== url) throw new Error(`${url} could not be opened, so check the link and the API key`);
 
             // A4 in inches, unless a document sets a page size of its own
             const { data } = await send("Page.printToPDF", { preferCSSPageSize: true, paperWidth: 210 / 25.4, paperHeight: 297 / 25.4 });
             const pdf = await PDFDocument.load(Buffer.from(data, "base64"));
+            const first = merged.getPageCount() + 1;
             for (const page of await merged.copyPages(pdf, pdf.getPageIndices())) merged.addPage(page);
+            contents.push({ title, first, last: merged.getPageCount() });
         }
-        return merged;
+        return { pdf: merged, contents };
     } finally {
         await new Promise(resolve => {
             chrome.once("exit", resolve);

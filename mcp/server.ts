@@ -1,6 +1,6 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
@@ -44,11 +44,34 @@ const documentId = (url: string) => {
     return id;
 };
 
+// Takes the markdown from a local file instead, so that a long template need not pass through the chat; only
+// Markdown files can be read, so that no other one, e.g. a configuration with the key, ends up in a document
+const readMarkdown = async <T extends { markdown?: string, markdown_file?: string }>(input: T) => {
+    const { markdown_file, ...rest } = input;
+    if (!markdown_file) return rest;
+    if (input.markdown !== undefined) throw new Error("Pass either markdown or markdown_file, not both");
+    if (!/\.md$/i.test(markdown_file)) throw new Error(`${markdown_file} is not a Markdown file ending in .md`);
+
+    const path = resolve(homedir(), markdown_file);
+    const markdown = await readFile(path, "utf8").catch(() => {
+        throw new Error(`${path} could not be read. The path has to be the one on the computer running this `
+            + "server, so ask the user for it if yours may differ, e.g. in a sandbox.");
+    });
+    return { ...rest, markdown };
+};
+
 const text = (value: string) => ({ content: [{ type: "text" as const, text: value }] });
 
 const url = z.string().describe("Link of the document, as returned by create_document, search_documents, or update_document, or copied from the browser.");
 const name = z.string().describe("Name of the document. A #tag at its start groups it in the user's documents, e.g. \"#Offers Ada\".");
 const markdown = z.string().describe("Content of the document, written in the syntax described in the guide.");
+const markdown_file = z.string().optional()
+    .describe("Path of a .md file on this computer to take the markdown from instead of passing it, e.g. a template in one of the user's folders, absolute or relative to their home folder.");
+const edits = z.array(z.object({
+    find: z.string().describe("Passage of the current markdown to replace, which has to appear exactly once in it, so include some of the surrounding text if needed."),
+    replace: z.string().describe("Text to put in its place, or an empty one to remove the passage.")
+})).optional()
+    .describe("Small changes to the current markdown, applied in order, instead of passing all of it, e.g. to fix a typo or remove a line. If a passage does not appear exactly once, nothing is changed.");
 const values = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]).nullable()).optional()
     .describe("Values to fill in, as a flat object keyed by placeholder names, with \"?name\": true or false for optional blocks, as described in the guide's section on importing values. Null removes a value, e.g. to let an optional block follow its expression again.");
 
@@ -71,9 +94,9 @@ serveStdio(() => {
             + "returns the link to share with the user. Read the guide with get_guide first, as the markdown and the "
             + "values follow the syntax described there. To change the document later on, use update_document "
             + "rather than creating another one.",
-        inputSchema: z.object({ name, markdown, values }),
+        inputSchema: z.object({ name, markdown: markdown.optional(), markdown_file, values }),
         annotations: { destructiveHint: false }
-    }, async input => text((await api("/api/documents", "POST", input)).url));
+    }, async input => text((await api("/api/documents", "POST", await readMarkdown(input))).url));
 
     server.registerTool("search_documents", {
         title: "Search Paperloop documents",
@@ -112,36 +135,47 @@ serveStdio(() => {
     server.registerTool("update_document", {
         title: "Update a Paperloop document",
         description: "Changes a document in the user's Paperloop account and returns its link. Pass only what "
-            + "changes. The markdown replaces the current one as a whole, so base it on the one returned by "
+            + "changes. For small changes, prefer edits, which replace single passages of the current markdown. The "
+            + "markdown, in contrast, replaces the current one as a whole, so base it on the one returned by "
             + "get_document to keep the user's edits. The values only replace the keys they contain and keep all "
             + "others, and null removes one. Published versions cannot be changed, except for their values, which all versions of a "
             + "document share. A document that is still open in the browser shows the changes once reloaded.",
-        inputSchema: z.object({ url, name: name.optional(), markdown: markdown.optional(), values })
-    }, async ({ url, ...input }) => text((await api(`/api/documents/${documentId(url)}`, "PATCH", input)).url));
+        inputSchema: z.object({ url, name: name.optional(), edits, markdown: markdown.optional(), markdown_file, values })
+    }, async ({ url, ...input }) => text((await api(`/api/documents/${documentId(url)}`, "PATCH", await readMarkdown(input))).url));
 
     server.registerTool("export_pdf", {
         title: "Export Paperloop documents as a PDF",
         description: "Prints one or more documents of the user's Paperloop account with Google Chrome on this "
             + "computer, just like its print dialog does, with their values, headers, footers, and page numbers, and "
             + "merges them in the given order into one PDF file, e.g. to check the final result of a document or to "
-            + "put together a contract from several ones. Returns the path of the file, and never overwrites an "
-            + "existing one. Requires Google Chrome to be installed.",
+            + "put together a contract from several ones. Returns the path of the file and the pages of each "
+            + "document in it. Requires Google Chrome to be installed.",
         inputSchema: z.object({
             urls: z.array(z.string()).min(1).describe("Links of the documents, in the order they should appear in the PDF, or a single link for just one document."),
-            file: z.string().describe("Name of the PDF file to save in the user's Downloads folder, e.g. \"Contract Ada.pdf\", or an absolute path.")
-        }),
-        annotations: { destructiveHint: false }
-    }, async ({ urls, file }) => {
-        const pdf = await printPdf(
+            file: z.string().describe("Name of the PDF file to save in the user's Downloads folder, e.g. \"Contract Ada.pdf\", a path within it, e.g. \"Paperloop/Contract Ada.pdf\", or an absolute path. Missing folders are created."),
+            overwrite: z.boolean().default(false).describe("Whether to replace an existing file, e.g. an earlier export of the same documents to check them again.")
+        })
+    }, async ({ urls, file, overwrite }) => {
+        // Only PDF files are written, so that no other file can be replaced
+        if (!/\.pdf$/i.test(file)) throw new Error(`${file} is not a PDF file ending in .pdf`);
+
+        const { pdf, contents } = await printPdf(
             urls.map(url => new URL(`/docs/${documentId(url)}/render`, PAPERLOOP_URL).href),
             new URL(PAPERLOOP_URL).origin,
             authorization()
         );
 
         const path = resolve(homedir(), "Downloads", file);
-        await writeFile(path, await pdf.save(), { flag: "wx" });
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, await pdf.save(), { flag: overwrite ? "w" : "wx" });
+
+        // The title of a page is the name of its document, followed by the one of Paperloop
         const pages = pdf.getPageCount();
-        return text(`Saved the PDF with ${pages} ${pages === 1 ? "page" : "pages"} to ${path}`);
+        return text([
+            `Saved the PDF with ${pages} ${pages === 1 ? "page" : "pages"} to ${path}:`,
+            ...contents.map(({ title, first, last }) => `- ${first === last ? `Page ${first}` : `Pages ${first}–${last}`}: `
+                + title.replace(/ \| Paperloop$/, ""))
+        ].join("\n"));
     });
 
     return server;
