@@ -79,10 +79,21 @@ serveStdio(() => {
         title: "Read a Paperloop document",
         description: "Returns the name, the current markdown, the values, and the link of a document in the user's "
             + "Paperloop account as JSON. Read it right before changing the document with update_document, as the "
-            + "user may have edited it in Paperloop since.",
-        inputSchema: z.object({ url }),
+            + "user may have edited it in Paperloop since. Leave out what you do not need, as a long markdown fills "
+            + "the context: the markdown, e.g. to only reuse the values in another document, or the values to only "
+            + "work on the template.",
+        inputSchema: z.object({
+            url,
+            markdown: z.boolean().default(true).describe("Whether to include the markdown."),
+            values: z.boolean().default(true).describe("Whether to include the values.")
+        }),
         annotations: { readOnlyHint: true }
-    }, async ({ url }) => text(JSON.stringify(await api(`/api/documents/${documentId(url)}`))));
+    }, async ({ url, markdown, values }) => {
+        const document = await api(`/api/documents/${documentId(url)}`);
+        if (!markdown) delete document.markdown;
+        if (!values) delete document.values;
+        return text(JSON.stringify(document));
+    });
 
     server.registerTool("update_document", {
         title: "Update a Paperloop document",
