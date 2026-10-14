@@ -325,7 +325,35 @@ The response contains the link to the new draft: `{ "url": "https://www.paperloo
 
 ---
 
-## 18. Common pitfalls
+## 18. Connecting AI agents
+
+AI agents like Claude or Codex can create documents for you directly. For this, the [repository](https://github.com/leogreu/Paperloop) contains a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. To build it, clone the repository and run the following with [Node.js](https://nodejs.org/) installed:
+
+```sh
+cd Paperloop/mcp
+npm install
+npm run build
+```
+
+Then add the server to the MCP configuration of your client, with the full path to the built file and your API key, and restart the client. Most clients take an entry like the following, others the same command, arguments and environment in a format of their own:
+
+```json
+{
+  "mcpServers": {
+    "paperloop": {
+      "command": "node",
+      "args": ["/path/to/Paperloop/mcp/dist/server.mjs"],
+      "env": { "PAPERLOOP_API_KEY": "pl_..." }
+    }
+  }
+}
+```
+
+Now simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. Should the client not find Node.js, replace `node` with the full path that `which node` prints in a terminal.
+
+---
+
+## 19. Common pitfalls
 
 When a document does not show what you expect, one of the following is usually the cause:
 

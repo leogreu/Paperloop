@@ -13,7 +13,8 @@ Paperloop separates the static from the dynamic parts of your documents. Write a
 - **Styling and alignment** — Align or style text and images with Tailwind CSS classes, e.g. `{.text-right}` at the end of a line or paragraph.
 - **Headers and footers** — Define print headers and footers via frontmatter at the top of a document, rendered with CSS page-margin boxes including page numbers. They may contain placeholders and calculations, which are filled in with the same values as the document itself.
 - **Value import** — Paste a JSON object of values via the clipboard button in the preview to fill in a document at once, e.g. one prepared by an AI agent. The [getting started guide](src/content/markdown/getting-started.md) describes the full syntax and the value format, and can be handed to an agent as is.
-- **API** — Create drafts from scripts or AI agents with a single `POST /api/documents`, authenticated by an API key from the documents overview. The response links to the new draft, and values passed along are filled in once it is opened.
+- **API** — Create drafts from scripts or AI agents with a single `POST /api/documents`, authenticated by an API key from the documents overview. The response links to the new draft, and values passed along are filled in once it is opened. `GET /api/getting-started` serves the guide as Markdown.
+- **MCP server** — Let AI agents like Claude or Codex create documents directly via a small local server in [mcp/](mcp/), which works with any MCP client, reads the current guide and keeps the API key out of the chat. The guide describes how to set it up.
 - **Versions and diffs** — Publish read-only versions of a document and browse the full history side by side, with word-level diff highlighting between versions.
 
 ## Development
@@ -24,6 +25,8 @@ npm run dev
 ```
 
 `npm run build` type-checks and builds the site.
+
+The MCP server is a separate package that is not part of the site's build. `npm install && npm run build` in `mcp/` bundles it into the self-contained `mcp/dist/server.mjs`. Set `PAPERLOOP_URL=http://localhost:4321` in its environment to point it to the development server.
 
 ## License
 
