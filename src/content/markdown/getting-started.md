@@ -1,14 +1,12 @@
 # Welcome 👋
 
-In Paperloop, you can write documents using Markdown, a lightweight and popular markup language. Markdown is widely used for writing websites, blog posts, presentations, and books. It allows you to format documents easily using plain text.
-
-Since not everyone is familiar with Markdown, this article explores the essential features by showcasing various text formatting options and elements.
+In Paperloop, you write documents in Markdown, which formats text with a few plain characters. This guide first shows its essentials, and then everything Paperloop adds on top, such as placeholders, calculations, and optional blocks.
 
 ---
 
 ## 1. Headings
 
-Headings in Markdown are created by using the `#` symbol. The number of `#` symbols denotes the level of the heading, with one `#` for the largest heading and up to five `#####` for the smallest heading.
+Start a line with one to five `#` for a heading of that level.
 
 # Heading 1
 ## Heading 2
@@ -20,28 +18,18 @@ Headings in Markdown are created by using the `#` symbol. The number of `#` symb
 
 ## 2. Emphasis
 
-You can emphasize text by making it **bold**, *italic*, or ***bold and italic*** using the following syntax:
-
-- **Bold**: Use `**text**` or `__text__`
-- *Italic*: Use `*text*` or `_text_`
-- ***Bold and italic***: Use `***text***` or `___text___`
+Wrap text in `*` for *italic*, in `**` for **bold**, or in `***` for ***both***. Underscores (`_`) work the same way.
 
 ---
 
 ## 3. Lists
 
-### 3.1 Unordered Lists
-
-To create unordered lists, use `-`, `+`, or `*` followed by a space:
+Start each item with `-`, `+`, or `*` and a space for an unordered list, or with a number and a period for an ordered one. Indent items to nest them.
 
 - Item
 - Item
   - Subitem
   - Subitem
-
-### 3.2 Ordered Lists
-
-Ordered lists are created by simply using numbers followed by periods (`1.`, `2.`, `3.`, etc.).
 
 1. Item
 2. Item
@@ -52,11 +40,9 @@ Ordered lists are created by simply using numbers followed by periods (`1.`, `2.
 
 ## 4. Links
 
-To add a link, you can use the following syntax: `[Link Text](URL)`.
+Write `[Link Text](URL)` for a link. To link to a section of the same document, give its heading an ID at the end, like `{#alignment}` in section 14, and link to `#alignment`.
 
 [Visit Paperloop](https://paperloop.io)
-
-You can also link to different headings on the current page:
 
 [Go to Alignment](#alignment)
 
@@ -64,17 +50,15 @@ You can also link to different headings on the current page:
 
 ## 5. Images
 
-You can insert images using similar syntax to links, but with an exclamation mark `!` in front: `![Alt Text](Image URL)`.
+Images are written like links, with an exclamation mark in front: `![Alt Text](Image URL)`. To align or size them, see [Alignment](#alignment).
 
 ![Paperloop](https://paperloop.io/og-image.png)
-
-If you want to align or size your images, please refer to section [Alignment](#alignment).
 
 ---
 
 ## 6. Blockquotes
 
-Blockquotes are used to highlight quoted or important text. Start a line with `>` followed by a space.
+Start a line with `>` and a space to highlight a quote or an important note.
 
 > This is a blockquote.
 > Blockquotes can span multiple lines.
@@ -83,15 +67,7 @@ Blockquotes are used to highlight quoted or important text. Start a line with `>
 
 ## 7. Code
 
-### 7.1 Inline Code
-
-To include inline code, wrap the text in backticks (`).
-
-Use `console.log()` in JavaScript to display output.
-
-### 7.2 Code Blocks
-
-For multi-line code blocks, use triple backticks (```).
+Wrap code within a line in backticks, as in `console.log()`, and a block of code in three backticks on lines of their own.
 
 ```js
 const greet = (name) => {
@@ -103,7 +79,7 @@ const greet = (name) => {
 
 ## 8. Horizontal rule
 
-You can create horizontal lines or separators by using three or more dashes (`---`), asterisks (`***`), or underscores (`___`). Horizontal rules will result in a page break when printing.
+Three or more dashes (`---`), asterisks (`***`), or underscores (`___`) on a line of their own, with an empty line above, create a horizontal rule, which becomes a page break when printing.
 
 ---
 
@@ -124,13 +100,11 @@ Table cells, including those of the header row, can also hold placeholders and c
 
 ## 10. Placeholders
 
-Paperloop allows to define placeholders in your documents that you can dynamically fill for each document. This results in a separation of static and dynamic content. Usually, the majority of a document is static while only a few parts are dynamic. This separation allows you to find a generic structure for your document that fits most use cases and then only adjust those parts that don't.
-
-To define a placeholder, simply wrap a word in square brackets `[]`.
+Placeholders mark the few parts of a document that differ each time you use it, while everything else stays the same. To define one, wrap a name in square brackets, and fill it in right in the rendered document.
 
 **Example:** Hello, [Name]!
 
-When you use a placeholder with the same variable name, it will get the same value automatically.
+Placeholders with the same name share their value automatically.
 
 **Example:** Thank you for reading this, [Name].
 
@@ -182,15 +156,6 @@ Append a format option to a placeholder or calculation to display its value nice
 - `:number`: a plain number, with the decimal places and the language, e.g. `:number(2, "de")`
 - `:date`: a date, with the style (`short`, `medium`, `long` or `full`) and the language, e.g. `:date("long")`
 
-**Available functions:**
-
-- `now()`: the current date and time as a full timestamp, so that it stays sortable and can be used in calculations — render it for the reader with `:date`
-- `optional(Name)`: the fallback or `?` entry of a placeholder, which otherwise counts as zero — see below
-
-**Example:** Today is [=now():date].
-
-Expressions follow the syntax of [mathjs](https://mathjs.org/docs/expressions/syntax.html): besides `+`, `-`, `*` and `/`, you can use `^` for powers, comparisons like `>` or `==`, and functions like `round(Value, 2)`, `min()`, `max()` or `abs()`.
-
 To avoid repeating these settings, a document can state them once in its frontmatter, so that a plain `:currency`, `:number` or `:date` is enough. Arguments written at an option still take precedence, and each setting may be left out on its own:
 
 ```
@@ -202,6 +167,15 @@ formatting:
 ---
 ```
 
+**Available functions:**
+
+- `now()`: the current date and time as a full timestamp, so that it stays sortable and can be used in calculations — render it for the reader with `:date`
+- `optional(Name)`: the fallback or `?` entry of a placeholder, which otherwise counts as zero — see below
+
+**Example:** Today is [=now():date].
+
+Expressions follow the syntax of [mathjs](https://mathjs.org/docs/expressions/syntax.html): besides `+`, `-`, `*` and `/`, you can use `^` for powers, comparisons like `>` or `==`, and functions like `round(Value, 2)`, `min()`, `max()` or `abs()`.
+
 Later expressions can reference earlier results by their name. Please use simple names (letters and digits, no spaces or hyphens) for placeholders you want to reference in expressions. To show a result again elsewhere, simply write its name, as in `[Gross:currency]`, which displays it read-only.
 
 While a referenced placeholder without a fallback is still empty, a calculation cannot be resolved and shows its name instead, just like every calculation building on it. Only the chosen side of a condition is calculated, so `[=Storage ? Subjects * 2 : 0]` resolves even while `Subjects` is empty, as long as `Storage` is not filled in.
@@ -210,19 +184,19 @@ For optional placeholders, append `??` with a fallback value that is shown and p
 
 **Example:** Optional placeholder: [Variable??1200:currency].
 
-To adjust such a value for a single document without it entering your calculations, start your entry with a question mark, as in `?2400`. It is then shown and printed without the question mark, like a fallback, and also counts as zero like one. This way, an optional price can be changed for one offer while it stays out of every total.
+To adjust such a value for a single document without it entering your calculations, start your entry with a question mark, as in `?2400`. It is then shown and printed without the question mark, like a fallback, and also counts as zero like one.
 
 To add up such optional prices anyway, e.g. for a separate sum of optional services, wrap a placeholder in `optional()`. It counts the fallback or the entry starting with a question mark, but zero once you enter the value without one — so a price never counts in both the regular and the optional sum. Optional blocks can use it in their expressions as well, e.g. `optional(Price) > 0`.
 
 **Example:** Optional services: [=optional(Variable):currency].
 
-Expressions can also result in text rather than a number. Wrap it in straight quotes (single or double), which may contain spaces and colons, and use a condition to decide between two of them. This way, a label can be shown only while a placeholder is still empty, and disappear as soon as it is filled in — on screen as well as in print.
+Expressions can also result in text rather than a number. Wrap it in straight quotes (single or double), which may contain spaces and colons, and use a condition to decide between two of them, e.g. to show a label only while a placeholder is still empty.
 
 **Example:** [Intro=Amount ? "" : "Optional: "][Amount??500:currency]
 
 If you do not need the result anywhere else, you can leave out the name entirely and simply write `[=Condition ? "Yes" : "No"]`. A condition can also reference an optional block by its name, which is true while the block is included. Please note that a placeholder containing `0` counts as not filled in, just like an empty one.
 
-Everything within an excluded block counts as zero in calculations: entered values, fallbacks, and results alike. This way, totals always match the printed document, and a value you entered counts again as soon as you include its block. A name that also occurs outside of excluded blocks counts as usual, e.g. a price shown in two alternative rows.
+Everything within an excluded block counts as zero in calculations, whether entered values, fallbacks, or results, so that totals always match the printed document. It counts again once you include the block, and a name that also occurs outside of excluded blocks counts as usual, e.g. a price shown in two alternative rows.
 
 ---
 
@@ -283,7 +257,7 @@ margins:
 
 Headers and footers may contain placeholders and calculations, filled in with the values you enter, including their fallbacks and format options. A name that is only calculated in the document itself is not available here — write the calculation into the header instead. The bottom center is reserved for the page number. Since YAML reads a leading `[` as the start of a list, put such a value in quotes — as in the footer above. Brackets in the middle of a line need no quotes.
 
-Please note that this feature uses the new [Page-Margin Boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) CSS feature, which is available starting in Chrome 131 (November, 2024).
+Please note that they rely on CSS [page-margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes), which Chrome supports from version 131 on.
 
 ---
 
@@ -323,7 +297,7 @@ curl -X POST https://www.paperloop.io/api/documents \
 
 The response contains the link to the new draft, which opens it rendered and ready to print: `{ "url": "https://www.paperloop.io/docs/.../render" }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in. Should you open the link again after changing some of them, you are asked whether to replace your changes.
 
-To change a draft later on, send only what changes to its own address, with the ID from its link. As the markdown replaces the current one as a whole, read it first with a `GET` to the same address, which returns the name and the markdown. Passing only values changes nothing but returns a new link that fills them in, encoded correctly, which a link edited by hand easily is not.
+To change a draft later on, send only what changes to its own address, with the ID from its link. As the markdown replaces the current one as a whole, read it first with a `GET` to the same address, which returns the name and the markdown. Passing only values changes nothing, but returns a new link that fills them in, with the values encoded correctly, unlike in a link edited by hand.
 
 ```sh
 curl https://www.paperloop.io/api/documents/... \
@@ -341,29 +315,7 @@ Published versions cannot be changed this way, except for their values. And shou
 
 ## 18. Connecting AI agents
 
-AI agents like Claude or Codex can create and update documents for you directly. For this, the [repository](https://github.com/leogreu/Paperloop) contains a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. To build it, clone the repository and run the following with [Node.js](https://nodejs.org/) installed:
-
-```sh
-cd Paperloop/mcp
-npm install
-npm run build
-```
-
-Then add the server to the MCP configuration of your client, with the full path to the built file and your API key, and restart the client. Most clients take an entry like the following, others the same command, arguments and environment in a format of their own:
-
-```json
-{
-  "mcpServers": {
-    "paperloop": {
-      "command": "node",
-      "args": ["/path/to/Paperloop/mcp/dist/server.mjs"],
-      "env": { "PAPERLOOP_API_KEY": "pl_..." }
-    }
-  }
-}
-```
-
-Now simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. Should the client not find Node.js, replace `node` with the full path that `which node` prints in a terminal.
+AI agents like Claude or Codex can create and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with.
 
 ---
 
