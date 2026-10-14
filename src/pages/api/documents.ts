@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         .filter(({ name }) => words.every(word => name.toLowerCase().includes(word)));
 
     return Response.json(documents.map(({ id, name, version, updated }) => (
-        { name, url: getDocumentUrl(url.origin, id), version: version ?? null, updated }
+        { name, url: getDocumentUrl(url.origin, id), version, updated }
     )));
 };
 

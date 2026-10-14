@@ -317,7 +317,7 @@ Published versions cannot be changed this way, except for their values, which al
 
 ## 18. Connecting AI agents
 
-AI agents like Claude or Codex can create and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. It can also save several documents as one PDF, printed with Google Chrome on your computer, e.g. to put together a contract.
+AI agents like Claude or Codex can find, create, and update documents for you directly, via a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. The [README](https://github.com/leogreu/Paperloop#mcp-server) of the repository describes how to set it up. Then simply ask your agent for a document, e.g. an offer for a new customer, and open the link it replies with. It can also save several documents as one PDF, printed with Google Chrome on your computer, e.g. to put together a contract.
 
 ---
 

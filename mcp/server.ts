@@ -46,7 +46,7 @@ const documentId = (url: string) => {
 
 const text = (value: string) => ({ content: [{ type: "text" as const, text: value }] });
 
-const url = z.string().describe("Link of the document, as returned by create_document or update_document, or copied from the browser.");
+const url = z.string().describe("Link of the document, as returned by create_document, search_documents, or update_document, or copied from the browser.");
 const name = z.string().describe("Name of the document. A #tag at its start groups it in the user's documents, e.g. \"#Offers Ada\".");
 const markdown = z.string().describe("Content of the document, written in the syntax described in the guide.");
 const values = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional()
