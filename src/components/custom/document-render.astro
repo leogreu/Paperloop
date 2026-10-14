@@ -7,11 +7,18 @@ export interface Props {
     value?: string;
 }
 
+// Texts of the dialog asking before a link replaces values, see below
 const i18n = getTranslations(getPreferredLocale(Astro.request.headers));
+const replace = {
+    title: i18n("replace-values-title"),
+    description: i18n("replace-values-description"),
+    cancel: i18n("replace-values-cancel"),
+    action: i18n("replace-values-action")
+};
 ---
 
-<div id="document-wrapper" class="max-w-prose mx-auto" transition:name="render" data-replace={i18n("values-replace")}>
-    <Particles data={Astro.props}></Particles>
+<div id="document-wrapper" class="max-w-prose mx-auto" transition:name="render">
+    <Particles data={{ ...Astro.props, replace }}></Particles>
     <article id="document-render" class="prose dark:prose-invert prose-img:rounded-md"></article>
 </div>
 
@@ -20,13 +27,14 @@ const i18n = getTranslations(getPreferredLocale(Astro.request.headers));
     import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateMargins, updateRender, repetitionInputs } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
     import type { Props } from "./document-render.astro";
+    import type { ConfirmDialogTexts } from "@/components/ui/confirm-dialog";
 
     document.addEventListener("astro:page-load", () => {
         const wrapper = document.getElementById("document-wrapper");
         const render = document.getElementById("document-render");
         if (!wrapper || !render) return;
 
-        let { doc, value = String() } = getParticles<Props>(wrapper);
+        let { doc, value = String(), replace } = getParticles<Props & { replace: ConfirmDialogTexts }>(wrapper);
 
         let values: Record<string, string> = {
             ...(doc && JSON.parse(localStorage.getItem(doc) ?? "{}")),
@@ -38,12 +46,19 @@ const i18n = getTranslations(getPreferredLocale(Astro.request.headers));
         if (location.hash.includes("=")) {
             const linked = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
 
-            // As such a link is often opened again later on, values entered since are only replaced on request
+            // As such a link is often opened again later on, values entered since are only replaced on request,
+            // after the document is shown with them; the dialog is only loaded then, as it requires React
             const conflict = Object.keys(values).length > 0
                 && Object.entries(linked).some(([key, value]) => values[key] !== value);
-            if (!conflict || confirm(wrapper.dataset.replace)) {
+            if (!conflict) {
                 values = { ...values, ...linked };
                 if (doc) localStorage.setItem(doc, JSON.stringify(values));
+            } else {
+                import("@/components/ui/confirm-dialog")
+                    .then(({ confirmDialog }) => confirmDialog(replace))
+                    .then(confirmed => {
+                        if (confirmed) updateRender.setValues?.({ ...values, ...linked });
+                    });
             }
 
             history.replaceState(history.state, "", location.pathname + location.search);

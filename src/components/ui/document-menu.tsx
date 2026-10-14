@@ -2,18 +2,7 @@ import { actions } from "astro:actions";
 import { navigate } from "astro:transitions/client";
 import { GalleryHorizontalEnd, Pencil, CircleCheck, Trash } from "lucide-react";
 import { IconButton } from "./icon-button";
-
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { confirmDialog } from "./confirm-dialog";
 
 interface DocumentMenuProps {
     id: string,
@@ -40,34 +29,21 @@ export const DocumentMenu = ({ id, document, version, translations }: DocumentMe
                         if (!error) setTimeout(() => navigate(""), 250);
                     }}></IconButton>
             }
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <IconButton icon={Trash} tooltip={translations["client-delete"]}></IconButton>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your
-                            account and remove your data from our servers.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction onClick={async () => {
-                            const { data, error } = versionsView
-                                ? await actions.deleteDocument(id)
-                                : await actions.deleteDocuments(document);
+            <IconButton icon={Trash} tooltip={translations["client-delete"]} onClick={async () => {
+                const confirmed = await confirmDialog({
+                    title: translations["client-delete-title"],
+                    description: translations[versionsView ? "client-delete-version" : "client-delete-document"],
+                    cancel: translations["client-cancel"],
+                    action: translations["client-delete"]
+                });
+                if (!confirmed) return;
 
-                            if (data && !error) setTimeout(() => navigate(data), 250);
-                        }}>
-                            Continue
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                const { data, error } = versionsView
+                    ? await actions.deleteDocument(id)
+                    : await actions.deleteDocuments(document);
+
+                if (data && !error) setTimeout(() => navigate(data), 250);
+            }}></IconButton>
         </div>
     );
 };

@@ -28,6 +28,14 @@ const distinct = docs.filter((doc, index) => {
 const locale = getPreferredLocale(Astro.request.headers);
 const i18n = getTranslations(locale);
 
+// Texts of the dialog asking before the API key is deleted
+const deleteApiKey = {
+    title: i18n("api-key-delete-title"),
+    description: i18n("api-key-delete-description"),
+    cancel: i18n("client-cancel"),
+    action: i18n("client-delete")
+};
+
 // TODO: Use Object.groupBy() when available
 const defaultTag = i18n("general");
 const tags = distinct.reduce<Record<string, typeof docs>>((result, doc) => {
@@ -47,7 +55,7 @@ const tags = distinct.reduce<Record<string, typeof docs>>((result, doc) => {
         title={i18n("api-key")}
         data-active={String(!!apiKey)}
         data-created={i18n("api-key-created")}
-        data-delete={i18n("api-key-delete")}
+        data-delete={JSON.stringify(deleteApiKey)}
     >
         <KeyRound strokeWidth="2.25" className="h-4 w-4" />
     </Button>
@@ -97,12 +105,14 @@ const tags = distinct.reduce<Record<string, typeof docs>>((result, doc) => {
     import { actions } from "astro:actions";
     import { navigate } from "astro:transitions/client";
 
-    // Creates a key and shows it once, or deletes the existing one, so a new one can be created
+    // Creates a key and shows it once, or deletes the existing one, so a new one can be created;
+    // the dialog is only loaded when needed, as it requires React
     document.addEventListener("astro:page-load", () => {
         const button = document.querySelector<HTMLButtonElement>("button#api-key");
         button?.addEventListener("click", async () => {
             if (button.dataset.active === "true") {
-                if (!confirm(button.dataset.delete)) return;
+                const { confirmDialog } = await import("@/components/ui/confirm-dialog");
+                if (!await confirmDialog(JSON.parse(button.dataset.delete!))) return;
                 await actions.deleteApiKey();
             } else {
                 const { data, error } = await actions.createApiKey();
