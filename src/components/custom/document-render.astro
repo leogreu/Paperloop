@@ -52,6 +52,12 @@ export interface Props {
         // assigned rather than added, as this runs again on every page load
         window.onbeforeprint = () => updateMargins(value, values);
 
+        // A link with new values only changes the fragment of an open document, which does not load it
+        // anew, so it is reloaded to take them over just like on the first load
+        window.onhashchange = () => {
+            if (location.hash.includes("=")) location.reload();
+        };
+
         // And renders based triggered by parents
         updateRender.setValue = input => {
             value = input;
