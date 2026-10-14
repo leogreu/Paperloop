@@ -1,13 +1,16 @@
 ---
 import Particles from './particles.astro';
+import { getPreferredLocale, getTranslations } from "@/utils/i18n";
 
 export interface Props {
     doc?: string;
     value?: string;
 }
+
+const i18n = getTranslations(getPreferredLocale(Astro.request.headers));
 ---
 
-<div id="document-wrapper" class="max-w-prose mx-auto" transition:name="render">
+<div id="document-wrapper" class="max-w-prose mx-auto" transition:name="render" data-replace={i18n("values-replace")}>
     <Particles data={Astro.props}></Particles>
     <article id="document-render" class="prose dark:prose-invert prose-img:rounded-md"></article>
 </div>
@@ -33,8 +36,16 @@ export interface Props {
         // Values in the URL fragment, e.g. from a link returned by the API, are stored once and then
         // removed from the URL; anchors like #alignment contain no "=" and are thereby left alone
         if (location.hash.includes("=")) {
-            values = { ...values, ...Object.fromEntries(new URLSearchParams(location.hash.slice(1))) };
-            if (doc) localStorage.setItem(doc, JSON.stringify(values));
+            const linked = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+
+            // As such a link is often opened again later on, values entered since are only replaced on request
+            const conflict = Object.keys(values).length > 0
+                && Object.entries(linked).some(([key, value]) => values[key] !== value);
+            if (!conflict || confirm(wrapper.dataset.replace)) {
+                values = { ...values, ...linked };
+                if (doc) localStorage.setItem(doc, JSON.stringify(values));
+            }
+
             history.replaceState(history.state, "", location.pathname + location.search);
         }
 

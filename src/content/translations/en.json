@@ -24,6 +24,7 @@
     "api-key": "API key",
     "api-key-created": "Your API key is only shown once, so please copy it now:",
     "api-key-delete": "Delete your API key? Requests using it will stop working.",
+    "values-replace": "This link contains values that differ from the ones in this document. Replace them with the values from the link?",
     "client-history": "History",
     "client-edit": "Edit",
     "client-release": "Release",
