@@ -309,6 +309,8 @@ curl -X PATCH https://www.paperloop.io/api/documents/... \
   -d '{ "markdown": "# Offer\n\n...", "values": { "Net": 1500 } }'
 ```
 
+To find documents, a `GET` to `/api/documents?query=...` lists those whose name contains every word of the query, in any order and case, with their links. An empty query lists all of them.
+
 Published versions cannot be changed this way, except for their values, which all versions share. And should the document still be open, reload it to see the changes, and before editing on, as the editor would otherwise save its previous content again.
 
 ---

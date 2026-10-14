@@ -75,6 +75,20 @@ serveStdio(() => {
         annotations: { destructiveHint: false }
     }, async input => text((await api("/api/documents", "POST", input)).url));
 
+    server.registerTool("search_documents", {
+        title: "Search Paperloop documents",
+        description: "Finds documents in the user's Paperloop account by their name, which often starts with a #tag "
+            + "grouping them, e.g. to collect the documents of a contract. Every word of the query has to appear in "
+            + "the name, in any order and case, and an empty query lists all documents. Returns the name, the link, "
+            + "the version (null for a draft, whose markdown can be changed), and the last update of the latest "
+            + "draft or version of each document as JSON, most recently updated first. Use the links with the other "
+            + "tools.",
+        inputSchema: z.object({
+            query: z.string().default(String()).describe("Words to find in the names, e.g. \"#Contracts ACME\".")
+        }),
+        annotations: { readOnlyHint: true }
+    }, async ({ query }) => text(JSON.stringify(await api(`/api/documents?${new URLSearchParams({ query })}`))));
+
     server.registerTool("get_document", {
         title: "Read a Paperloop document",
         description: "Returns the name, the current markdown, the values, and the link of a document in the user's "
