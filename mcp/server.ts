@@ -60,34 +60,30 @@ serveStdio(() => {
 
     server.registerTool("create_document", {
         title: "Create a Paperloop document",
-        description: "Creates a new draft in the user's Paperloop account and returns its link. Read the guide with "
-            + "get_guide first, as the markdown and the values follow the syntax described there. The values travel "
-            + "within the link and are only filled in when the user opens exactly this link in a browser where they "
-            + "are logged in to Paperloop, so always share the complete link. To change the document later on, use "
-            + "update_document rather than creating another one.",
+        description: "Creates a new draft in the user's Paperloop account, stores its values along with it, and "
+            + "returns the link to share with the user. Read the guide with get_guide first, as the markdown and the "
+            + "values follow the syntax described there. To change the document later on, use update_document "
+            + "rather than creating another one.",
         inputSchema: z.object({ name, markdown, values }),
         annotations: { destructiveHint: false }
     }, async input => text((await api("/api/documents", "POST", input)).url));
 
     server.registerTool("get_document", {
         title: "Read a Paperloop document",
-        description: "Returns the name, the current markdown, and the link of a document in the user's Paperloop "
-            + "account as JSON. Read it right before changing the markdown with update_document, as the user may "
-            + "have edited the document in Paperloop since. Its values are only stored in the user's browser and "
-            + "thereby not included.",
+        description: "Returns the name, the current markdown, the values, and the link of a document in the user's "
+            + "Paperloop account as JSON. Read it right before changing the document with update_document, as the "
+            + "user may have edited it in Paperloop since.",
         inputSchema: z.object({ url }),
         annotations: { readOnlyHint: true }
     }, async ({ url }) => text(JSON.stringify(await api(documentPath(url)))));
 
     server.registerTool("update_document", {
         title: "Update a Paperloop document",
-        description: "Changes a draft in the user's Paperloop account and returns its new link, to be shared like the "
-            + "one of create_document. Pass only what changes. The markdown replaces the current one as a whole, so "
-            + "base it on the one returned by get_document to keep the user's edits. To change only values, pass "
-            + "only values: the document stays as it is, and the new link fills them in once the user opens it. "
-            + "Always use this tool for that rather than building a link yourself, as the values need to be encoded. "
-            + "Before values the user has changed themselves are replaced, they are asked to confirm. Published "
-            + "versions cannot be changed, except for their values.",
+        description: "Changes a document in the user's Paperloop account and returns its link. Pass only what "
+            + "changes. The markdown replaces the current one as a whole, so base it on the one returned by "
+            + "get_document to keep the user's edits. The values only replace the keys they contain and keep all "
+            + "others. Published versions cannot be changed, except for their values, which all versions of a "
+            + "document share. A document that is still open in the browser shows the changes once reloaded.",
         inputSchema: z.object({ url, name: name.optional(), markdown: markdown.optional(), values })
     }, async ({ url, ...input }) => text((await api(documentPath(url), "PATCH", input)).url));
 

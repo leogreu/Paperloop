@@ -1,67 +1,56 @@
 ---
 import Particles from './particles.astro';
-import { getPreferredLocale, getTranslations } from "@/utils/i18n";
 
 export interface Props {
     doc?: string;
     value?: string;
+    values?: Record<string, string>;
 }
-
-// Texts of the dialog asking before a link replaces values, see below
-const i18n = getTranslations(getPreferredLocale(Astro.request.headers));
-const replace = {
-    title: i18n("replace-values-title"),
-    description: i18n("replace-values-description"),
-    cancel: i18n("replace-values-cancel"),
-    action: i18n("replace-values-action")
-};
 ---
 
 <div id="document-wrapper" class="max-w-prose mx-auto" transition:name="render">
-    <Particles data={{ ...Astro.props, replace }}></Particles>
+    <Particles data={Astro.props}></Particles>
     <article id="document-render" class="prose dark:prose-invert prose-img:rounded-md"></article>
 </div>
 
 <script>
+    import { actions } from "astro:actions";
     import { getParticles } from "@/utils/particles";
     import { markdownToHTML, updateOptional, updateComputed, updateNumbering, updateMargins, updateRender, repetitionInputs } from "@/utils/markdown";
     import { ContentEditable } from "@/components/custom/content-editable";
+    import { debounce } from "@/utils/debounce";
     import type { Props } from "./document-render.astro";
-    import type { ConfirmDialogTexts } from "@/components/ui/confirm-dialog";
 
     document.addEventListener("astro:page-load", () => {
         const wrapper = document.getElementById("document-wrapper");
         const render = document.getElementById("document-render");
         if (!wrapper || !render) return;
 
-        let { doc, value = String(), replace } = getParticles<Props & { replace: ConfirmDialogTexts }>(wrapper);
+        let { doc, value = String(), values = {} } = getParticles<Props>(wrapper);
 
-        let values: Record<string, string> = {
-            ...(doc && JSON.parse(localStorage.getItem(doc) ?? "{}")),
-            ...Object.fromEntries(new URLSearchParams(location.search))
+        // Collects the changed keys, with null for removed ones, and saves them once typing pauses
+        let changes: Record<string, string | null> = {};
+        const saveChanges = debounce((document: string) => {
+            actions.updateValues({ document, values: changes });
+            changes = {};
+        }, 1000);
+        const save = (input: Record<string, string | null>) => {
+            if (!doc) return;
+            Object.assign(changes, input);
+            saveChanges(doc);
         };
 
-        // Values in the URL fragment, e.g. from a link returned by the API, are stored once and then
-        // removed from the URL; anchors like #alignment contain no "=" and are thereby left alone
-        if (location.hash.includes("=")) {
-            const linked = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
-
-            // As such a link is often opened again later on, values entered since are only replaced on request,
-            // after the document is shown with them; the dialog is only loaded then, as it requires React
-            const conflict = Object.keys(values).length > 0
-                && Object.entries(linked).some(([key, value]) => values[key] !== value);
-            if (!conflict) {
-                values = { ...values, ...linked };
-                if (doc) localStorage.setItem(doc, JSON.stringify(values));
-            } else {
-                import("@/components/ui/confirm-dialog")
-                    .then(({ confirmDialog }) => confirmDialog(replace))
-                    .then(confirmed => {
-                        if (confirmed) updateRender.setValues?.({ ...values, ...linked });
-                    });
+        // Takes over the values once from the browser, where they used to be stored, and only removes
+        // them there once saved; TODO: remove when all documents in use have been opened again
+        const stored = doc && localStorage.getItem(doc);
+        if (doc && stored) {
+            if (Object.keys(values).length) localStorage.removeItem(doc);
+            else {
+                values = JSON.parse(stored);
+                actions.updateValues({ document: doc, values }).then(({ error }) => {
+                    if (!error) localStorage.removeItem(doc);
+                });
             }
-
-            history.replaceState(history.state, "", location.pathname + location.search);
         }
 
         // Intial render
@@ -78,29 +67,24 @@ const replace = {
         // assigned rather than added, as this runs again on every page load
         window.onbeforeprint = () => updateMargins(value, values);
 
-        // A link with new values only changes the fragment of an open document, which does not load it
-        // anew, so it is reloaded to take them over just like on the first load
-        window.onhashchange = () => {
-            if (location.hash.includes("=")) location.reload();
-        };
-
         // And renders based triggered by parents
         updateRender.setValue = input => {
             value = input;
             renderDocument();
         }
 
+        // Replaces all values, e.g. on import, so that keys left out are removed
         updateRender.setValues = input => {
+            save({ ...Object.fromEntries(Object.keys(values).map(key => [key, null])), ...input });
             values = input;
             renderDocument();
-            if (doc) localStorage.setItem(doc, JSON.stringify(values));
         }
 
         render.addEventListener("input", ({ target }) => {
             if (target instanceof ContentEditable) {
                 const { value, placeholder } = target;
                 values[placeholder] = value;
-                if (doc) localStorage.setItem(doc, JSON.stringify(values));
+                save({ [placeholder]: value });
 
                 // A repetition bound changes which rows exist, so the document is rendered anew,
                 // continuing in the same occurrence of the field that is being typed in
@@ -128,7 +112,7 @@ const replace = {
                 if (target.checked) values[key] = "true";
                 else if (target.dataset.expression) values[key] = "false";
                 else delete values[key];
-                if (doc) localStorage.setItem(doc, JSON.stringify(values));
+                save({ [key]: values[key] ?? null });
                 renderDocument();
             }
         });

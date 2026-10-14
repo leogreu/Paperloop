@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { db, Document } from "astro:db";
 import { Input, error, getApiUser, getDocumentUrl, parseInput } from "@/utils/api";
+import { patchValues } from "@/utils/values";
 
 // Creates a draft for the owner of the API key and returns the URL of its rendered view
 export const POST: APIRoute = async ({ request, url }) => {
@@ -19,6 +20,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         updated: new Date(),
         user
     }).returning();
+    if (values) await patchValues(document.document, user, values);
 
-    return Response.json({ url: getDocumentUrl(url.origin, document.id, values) }, { status: 201 });
+    return Response.json({ url: getDocumentUrl(url.origin, document.id) }, { status: 201 });
 };

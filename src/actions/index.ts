@@ -1,9 +1,10 @@
 import { defineAction, ActionError } from "astro:actions";
-import { and, db, eq, ApiKey, Document } from "astro:db";
+import { and, db, eq, ApiKey, Document, DocumentValues } from "astro:db";
 import { z } from "astro:schema";
 import { supabase } from "@/lib/supabase";
 import { createGettingStarted } from "@/utils/content";
 import { generateApiKey, hashApiKey } from "@/utils/api-key";
+import { patchValues } from "@/utils/values";
 
 export const server = {
     auth: defineAction({
@@ -78,6 +79,25 @@ export const server = {
                 .where(and(eq(Document.id, id), eq(Document.user, user.id)));
         }
     }),
+    // Only the changed keys are sent, with null for removed ones, so that a tab that is still open
+    // does not overwrite values changed elsewhere; the document is not marked as updated by them
+    updateValues: defineAction({
+        accept: "json",
+        input: z.object({
+            document: z.string(),
+            values: z.record(z.string().nullable())
+        }),
+        handler: async ({ document, values }, { locals: { user }}) => {
+            if (!user) throw new ActionError({ code: "UNAUTHORIZED" });
+
+            const owned = await db.select().from(Document).where(
+                and(eq(Document.document, document), eq(Document.user, user.id))
+            ).get();
+            if (!owned) throw new ActionError({ code: "BAD_REQUEST" });
+
+            await patchValues(document, user.id, values);
+        }
+    }),
     publishDocument: defineAction({
         accept: "json",
         input: z.string(),
@@ -133,7 +153,10 @@ export const server = {
             const remaining = await db.select().from(Document).where(
                 eq(Document.document, deleted.document)
             );
-            return remaining.length ? `/docs/versions/${deleted.document}` : "/docs";
+            if (remaining.length) return `/docs/versions/${deleted.document}`;
+
+            await db.delete(DocumentValues).where(eq(DocumentValues.document, deleted.document));
+            return "/docs";
         }
     }),
     deleteDocuments: defineAction({
@@ -144,6 +167,9 @@ export const server = {
 
             await db.delete(Document).where(
                 and(eq(Document.document, document), eq(Document.user, user.id))
+            );
+            await db.delete(DocumentValues).where(
+                and(eq(DocumentValues.document, document), eq(DocumentValues.user, user.id))
             );
             return "/docs";
         }

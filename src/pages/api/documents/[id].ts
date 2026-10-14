@@ -1,19 +1,20 @@
 import type { APIRoute } from "astro";
 import { db, eq, Document } from "astro:db";
 import { Input, error, getApiDocument, getDocumentUrl, parseInput } from "@/utils/api";
+import { getValues, patchValues } from "@/utils/values";
 
-// Returns the current state of a document, e.g. for an agent to base an update on; its values are
-// only stored in the browser and thereby not included
+// Returns the current state of a document, e.g. for an agent to base an update on
 export const GET: APIRoute = async ({ request, params, url }) => {
     const document = await getApiDocument(request, params.id);
     if (document instanceof Response) return document;
 
     const { id, name, markdown } = document;
-    return Response.json({ name, markdown, url: getDocumentUrl(url.origin, id) });
+    const values = await getValues(document.document);
+    return Response.json({ name, markdown, values, url: getDocumentUrl(url.origin, id) });
 };
 
-// Changes the name or markdown of a draft and returns its URL; with values only, nothing is changed,
-// so that the URL merely fills them in when it is opened, just like on creation
+// Changes the name or markdown of a draft, and replaces only the given values, which are shared by
+// all versions and can thereby be changed for published ones as well
 export const PATCH: APIRoute = async ({ request, params, url }) => {
     const document = await getApiDocument(request, params.id);
     if (document instanceof Response) return document;
@@ -32,6 +33,7 @@ export const PATCH: APIRoute = async ({ request, params, url }) => {
             .set({ name, markdown, updated: new Date() })
             .where(eq(Document.id, document.id));
     }
+    if (values) await patchValues(document.document, document.user, values);
 
-    return Response.json({ url: getDocumentUrl(url.origin, document.id, values) });
+    return Response.json({ url: getDocumentUrl(url.origin, document.id) });
 };

@@ -39,12 +39,4 @@ export const parseInput = async <T extends z.ZodTypeAny>(request: Request, schem
     return error(issues.join(", "), 400);
 };
 
-// The rendered view of a document, with the values in the fragment, as it is never sent to the server
-// and thereby not subject to its URL length limit
-export const getDocumentUrl = (origin: string, id: string, values: z.infer<typeof Input>["values"] = {}) => {
-    const fragment = new URLSearchParams(
-        Object.entries(values).map(([key, value]) => [key, String(value)])
-    ).toString();
-
-    return `${origin}/docs/${id}/render${fragment && `#${fragment}`}`;
-};
+export const getDocumentUrl = (origin: string, id: string) => `${origin}/docs/${id}/render`;
