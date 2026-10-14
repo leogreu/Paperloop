@@ -49,8 +49,8 @@ const text = (value: string) => ({ content: [{ type: "text" as const, text: valu
 const url = z.string().describe("Link of the document, as returned by create_document, search_documents, or update_document, or copied from the browser.");
 const name = z.string().describe("Name of the document. A #tag at its start groups it in the user's documents, e.g. \"#Offers Ada\".");
 const markdown = z.string().describe("Content of the document, written in the syntax described in the guide.");
-const values = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional()
-    .describe("Values to fill in, as a flat object keyed by placeholder names, with \"?name\": true or false for optional blocks, as described in the guide's section on importing values.");
+const values = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]).nullable()).optional()
+    .describe("Values to fill in, as a flat object keyed by placeholder names, with \"?name\": true or false for optional blocks, as described in the guide's section on importing values. Null removes a value, e.g. to let an optional block follow its expression again.");
 
 serveStdio(() => {
     const server = new McpServer({ name: "paperloop", version: "1.0.0" });
@@ -114,7 +114,7 @@ serveStdio(() => {
         description: "Changes a document in the user's Paperloop account and returns its link. Pass only what "
             + "changes. The markdown replaces the current one as a whole, so base it on the one returned by "
             + "get_document to keep the user's edits. The values only replace the keys they contain and keep all "
-            + "others. Published versions cannot be changed, except for their values, which all versions of a "
+            + "others, and null removes one. Published versions cannot be changed, except for their values, which all versions of a "
             + "document share. A document that is still open in the browser shows the changes once reloaded.",
         inputSchema: z.object({ url, name: name.optional(), markdown: markdown.optional(), values })
     }, async ({ url, ...input }) => text((await api(`/api/documents/${documentId(url)}`, "PATCH", input)).url));

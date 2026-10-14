@@ -297,7 +297,7 @@ curl -X POST https://www.paperloop.io/api/documents \
 
 The response contains the link to the new draft, which opens it rendered and ready to print: `{ "url": "https://www.paperloop.io/docs/.../render" }`. The values are optional, follow the format described above, and are stored along with the document.
 
-To change a draft later on, send only what changes to its own address, with the ID from its link. The markdown replaces the current one as a whole, while values only replace the keys they contain. So read the current state first with a `GET` to the same address, which returns the name, the markdown, and the values.
+To change a draft later on, send only what changes to its own address, with the ID from its link. The markdown replaces the current one as a whole, while values only replace the keys they contain, and `null` removes one, e.g. to let an optional block follow its expression again. So read the current state first with a `GET` to the same address, which returns the name, the markdown, and the values.
 
 ```sh
 curl https://www.paperloop.io/api/documents/... \

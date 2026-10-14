@@ -5,7 +5,7 @@ import { hashApiKey } from "@/utils/api-key";
 export const Input = z.object({
     name: z.string(),
     markdown: z.string(),
-    values: z.record(z.union([z.string(), z.number(), z.boolean()])).optional()
+    values: z.record(z.union([z.string(), z.number(), z.boolean()]).nullable()).optional()
 });
 
 export const error = (message: string, status: number) => Response.json({ error: message }, { status });
