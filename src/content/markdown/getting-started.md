@@ -310,7 +310,7 @@ Please note that importing replaces all values of the document. And as values ar
 
 ---
 
-## 17. Creating documents via API
+## 17. Creating and updating documents via API
 
 Scripts and AI agents can create documents, too. Click the key button at the top right of your documents to create an API key, which is shown only once. Clicking it again deletes the key, after which you can create a new one.
 
@@ -323,11 +323,25 @@ curl -X POST https://www.paperloop.io/api/documents \
 
 The response contains the link to the new draft, which opens it rendered and ready to print: `{ "url": "https://www.paperloop.io/docs/.../render" }`. The values are optional and follow the format described above. They travel within the link and are filled in once you open it in a browser where you are logged in. Should you open the link again after changing some of them, you are asked whether to replace your changes.
 
+To change a draft later on, send only what changes to its own address, with the ID from its link. As the markdown replaces the current one as a whole, read it first with a `GET` to the same address, which returns the name and the markdown. Passing only values changes nothing but returns a new link that fills them in, encoded correctly, which a link edited by hand easily is not.
+
+```sh
+curl https://www.paperloop.io/api/documents/... \
+  -H "Authorization: Bearer pl_..."
+
+curl -X PATCH https://www.paperloop.io/api/documents/... \
+  -H "Authorization: Bearer pl_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "markdown": "# Offer\n\n...", "values": { "Net": 1500 } }'
+```
+
+Published versions cannot be changed this way, except for their values. And should the draft still be open in the editor, reload it before editing on, as it would otherwise save its previous content again.
+
 ---
 
 ## 18. Connecting AI agents
 
-AI agents like Claude or Codex can create documents for you directly. For this, the [repository](https://github.com/leogreu/Paperloop) contains a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. To build it, clone the repository and run the following with [Node.js](https://nodejs.org/) installed:
+AI agents like Claude or Codex can create and update documents for you directly. For this, the [repository](https://github.com/leogreu/Paperloop) contains a small MCP server that any MCP client starts on its own. It reads this guide to know the current syntax, and passes your API key to Paperloop without the key ever appearing in a chat. To build it, clone the repository and run the following with [Node.js](https://nodejs.org/) installed:
 
 ```sh
 cd Paperloop/mcp
